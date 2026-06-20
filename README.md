@@ -1,4 +1,5 @@
-<img width="1774" height="887" alt="rr_logo" src="https://github.com/user-attachments/assets/824851cc-8d0e-4997-aa14-6bc3ba1e977a" />
+<img width="1774" height="887" alt="rrlogoc" src="https://github.com/user-attachments/assets/6b797545-b1bb-411d-ba95-8ee0d9bbcf0c" />
+
 
 
 > **Upload your resume. Get roasted. Get hired.**
