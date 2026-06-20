@@ -77,19 +77,18 @@ export const LandingView: React.FC<LandingViewProps> = ({ onFileUpload }) => {
             </p>
           </div>
 
-          {/* Features list */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-2.5 text-sm text-secondary font-medium">
               <CheckCircle2 className="w-4.5 h-4.5 text-neutral-900 flex-shrink-0" />
-              <span>Detects ATS formatting traps and filler skills</span>
+              <span>Exposes your copy-pasted corporate buzzwords and filler skills</span>
             </div>
             <div className="flex items-center gap-2.5 text-sm text-secondary font-medium">
               <CheckCircle2 className="w-4.5 h-4.5 text-neutral-900 flex-shrink-0" />
-              <span>Generates side-by-side bullet point improvements</span>
+              <span>Rewrites your lazy bullet points with measurable impact</span>
             </div>
             <div className="flex items-center gap-2.5 text-sm text-secondary font-medium">
               <CheckCircle2 className="w-4.5 h-4.5 text-neutral-900 flex-shrink-0" />
-              <span>Simulates recruiter speedrun scanning analysis</span>
+              <span>Simulates a tired recruiter sliding your resume to the trash</span>
             </div>
           </div>
         </div>
