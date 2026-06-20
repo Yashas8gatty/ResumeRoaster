@@ -295,7 +295,7 @@ interface RoastResponse {
 Do not include any markdown backticks (\`\`\`json ... \`\`\`) in your response. Return ONLY raw valid JSON matching this schema.`;
 
     const response = await openai.chat.completions.create({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Here is the resume content to roast:\n\n${resumeText}` }
@@ -399,7 +399,7 @@ Your goals:
 4. Reference details of their resume or your roast data (e.g. their score, their skills, or their projects) to prove you actually "read" it.`;
 
     const response = await openai.chat.completions.create({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       messages: [
         { role: 'system', content: systemInstruction },
         ...messages.map((m: any) => ({
