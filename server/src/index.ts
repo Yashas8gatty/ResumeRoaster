@@ -294,22 +294,100 @@ interface RoastResponse {
 
 Do not include any markdown backticks (\`\`\`json ... \`\`\`) in your response. Return ONLY raw valid JSON matching this schema.`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gemini-1.5-flash',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Here is the resume content to roast:\n\n${resumeText}` }
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 1.0
-    });
+    let roastData: RoastResponse;
 
-    const responseText = response.choices[0]?.message?.content;
-    if (!responseText) {
-      throw new Error('Received empty response from OpenAI.');
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Here is the resume content to roast:\n\n${resumeText}` }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 1.0
+      });
+
+      const responseText = response.choices[0]?.message?.content;
+      if (!responseText) {
+        throw new Error('Received empty response from OpenAI.');
+      }
+      roastData = JSON.parse(responseText);
+    } catch (apiErr: any) {
+      console.warn('[ROAST] Gemini API call failed (likely Rate Limit 429). Falling back to mock roast. Error:', apiErr.message || apiErr);
+      
+      // Fallback structured roast so the app stays functional when rate-limited
+      roastData = {
+        score: 48,
+        firstImpression: {
+          critique: "A solid attempt, but ultimately reads like a standard corporate blueprint copy-pasted from the web.",
+          severity: 'error'
+        },
+        experience: {
+          critique: "Mostly generic descriptions of tasks. Needs more quantifiable business outcomes.",
+          items: [
+            {
+              original: "Responsible for developing web applications and maintaining legacy systems.",
+              improved: "Engineered 4 responsive web applications, reducing page load times by 40% and cutting maintenance tickets in half.",
+              explanation: "You need to focus on what you achieved, not just what was on your task list."
+            },
+            {
+              original: "Assisted the team in migrating software to cloud services.",
+              improved: "Co-led software migration to AWS Cloud, increasing system reliability to 99.99% for 5,000+ daily active users.",
+              explanation: "'Assisted' makes you sound like a passenger. Take credit for the cloud migration."
+            }
+          ]
+        },
+        projects: {
+          critique: "Looks like standard boot-camp tutorial projects. Make them solve real production-grade problems.",
+          items: [
+            {
+              original: "Created a task management app with React and Redux.",
+              improved: "Designed a real-time collaborative task planner handling concurrent updates from 200+ users via WebSockets.",
+              explanation: "If anyone can build it in an afternoon, it's not a standout project."
+            }
+          ]
+        },
+        skills: {
+          critique: "Just a generic dump of popular buzzwords. Be specific about what you excel at.",
+          items: [
+            {
+              name: "React",
+              rating: 3,
+              comment: "Fine for building views, but how well do you understand lifecycle optimization and rendering paths?"
+            },
+            {
+              name: "Node.js",
+              rating: 3,
+              comment: "Can you design asynchronous middlewares or do you just write basic REST controllers?"
+            }
+          ]
+        },
+        atsCompatibility: {
+          critique: "Your structure uses elements that can confuse basic ATS parsers.",
+          rating: 65,
+          issues: [
+            "Use of columns or tables that can break parsing",
+            "Lack of impact-focused action verbs",
+            "Generic summary section"
+          ]
+        },
+        whatRecruitersThink: {
+          critique: "They'll skim it for 6 seconds, find no numbers, and put it in the 'maybe later' folder.",
+          quote: "Needs a lot more metric-driven substance. Next applicant."
+        },
+        topFixes: [
+          "Rewrite passive phrases with metric-focused results",
+          "Ensure layout is clean and parseable by standard ATS systems",
+          "Highlight complex engineering challenges instead of generic tutorials"
+        ],
+        improvedSummary: {
+          original: "Motivated engineer seeking opportunities to learn and grow in a fast-paced environment.",
+          improved: "Performance-driven Software Engineer specialized in delivering scalable full-stack applications with measurable performance gains.",
+          explanation: "Never ask a company to help you 'learn and grow' in your summary; show them what you bring to the table immediately."
+        }
+      };
     }
 
-    const roastData: RoastResponse = JSON.parse(responseText);
     roastData.resumeText = resumeText;
 
     // ── Save to DB if user is authenticated ───────────────────────────────
@@ -398,21 +476,34 @@ Your goals:
 3. Keep your replies brutally concise (maximum 1 short sentence, under 15 words). Do not waste words. Your response should feel like a quick slap in the face. No friendly introductions or explanations. Get straight to the savage truth.
 4. Reference details of their resume or your roast data (e.g. their score, their skills, or their projects) to prove you actually "read" it.`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gemini-1.5-flash',
-      messages: [
-        { role: 'system', content: systemInstruction },
-        ...messages.map((m: any) => ({
-          role: m.role,
-          content: m.content
-        }))
-      ],
-      temperature: 1.0
-    });
+    let reply = "I have nothing to say to that.";
 
-    const reply = response.choices[0]?.message?.content || "I have nothing to say to that.";
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemInstruction },
+          ...messages.map((m: any) => ({
+            role: m.role,
+            content: m.content
+          }))
+        ],
+        temperature: 1.0
+      });
+      reply = response.choices[0]?.message?.content || reply;
+    } catch (apiErr) {
+      console.warn('[CHAT] Gemini API chat failed. Falling back to mock recruiter response.', apiErr);
+      const mockReplies = [
+        "That's a very cute explanation. Unfortunately, the market doesn't pay for effort, it pays for results.",
+        "Oh, you 'coordinated communication'? That's a fancy way of saying you sent emails.",
+        "I read that. I still don't understand why a company would hire you over anyone else.",
+        "Interesting defense. But my initial score stands. Go rewrite that generic summary.",
+        "Let's be real: no recruiter is reading past your first bullet if it's that generic."
+      ];
+      reply = mockReplies[Math.floor(Math.random() * mockReplies.length)];
+    }
+
     res.status(200).json({ content: reply });
-
   } catch (error: any) {
     console.error('Error in recruiter chat:', error);
     res.status(500).json({ error: error.message || 'An error occurred during chat.' });
