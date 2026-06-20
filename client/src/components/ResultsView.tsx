@@ -54,6 +54,8 @@ interface RoastResponse {
   resumeText?: string;
 }
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const checkProjectDiagnostics = (text: string) => {
   const hasMetrics = /[\d%#$]+/g.test(text);
   const hasImpact = /(impact|save|reduce|increase|optimize|improve|speed|revenue|cost|million)/i.test(text);
@@ -192,7 +194,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
     }, 2000);
 
     try {
-      const response = await fetch('http://localhost:5000/api/chat', {
+      const response = await fetch(`${API}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

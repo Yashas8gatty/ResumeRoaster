@@ -8,6 +8,8 @@ import { AlertCircle, LogOut, History } from 'lucide-react';
 
 type Step = 'idle' | 'loading' | 'results';
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 interface RoastResponse {
   score: number;
   firstImpression: {
@@ -83,7 +85,7 @@ function AppInner() {
     formData.append('resume', file);
 
     try {
-      const response = await fetch('http://localhost:5000/api/roast', {
+      const response = await fetch(`${API}/api/roast`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
@@ -129,7 +131,7 @@ function AppInner() {
             <button
               id="history-btn"
               title="Roast History"
-              onClick={() => window.open('http://localhost:5000/api/user/history', '_blank')}
+              onClick={() => window.open(`${API}/api/user/history`, '_blank')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 text-xs font-bold text-secondary hover:text-primary hover:border-neutral-300 hover:bg-neutral-50 transition-all"
             >
               <History className="w-3.5 h-3.5" /> History
