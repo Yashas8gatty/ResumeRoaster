@@ -1,4 +1,5 @@
-# 🔥 Resume Roast
+<img width="1774" height="887" alt="rr_logo" src="https://github.com/user-attachments/assets/824851cc-8d0e-4997-aa14-6bc3ba1e977a" />
+
 
 > **Upload your resume. Get roasted. Get hired.**
 > 
@@ -6,17 +7,17 @@
 
 ---
 
-## ✨ Features
+##  Features
 
-* **💀 Recruiter-Style Roast & Score:** Get a brutal score and unfiltered, sarcastic critique highlighting exactly why your resume gets ignored.
-* **🛡️ ATS Compatibility Checker:** Identifies formatting traps, weak bullet points, and filler skills.
-* **✍️ Before vs. After Rewrites:** Generates direct side-by-side bullet point improvements with measurable impact.
-* **🔐 Secure Auth:** Sign up and log in securely via Supabase.
-* **📜 Roast History:** Access and view all your previous resume roasts and scores from your personal dashboard.
+* ** Recruiter-Style Roast & Score:** Get a brutal score and unfiltered, sarcastic critique highlighting exactly why your resume gets ignored.
+* ** ATS Compatibility Checker:** Identifies formatting traps, weak bullet points, and filler skills.
+* ** Before vs. After Rewrites:** Generates direct side-by-side bullet point improvements with measurable impact.
+* ** Secure Auth:** Sign up and log in securely via Supabase.
+* ** Roast History:** Access and view all your previous resume roasts and scores from your personal dashboard.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 * **Frontend:** React, TypeScript, Tailwind CSS, Lucide Icons, Framer Motion
 * **Backend:** Node.js, Express, Multer (for PDF handling)
@@ -25,7 +26,7 @@
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Clone the repository
 ```bash
