@@ -420,10 +420,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
         </div>
 
         {/* TOP TAB BAR NAVIGATION */}
-        <div className="w-full overflow-x-auto scrollbar-none flex gap-2 pb-2 mb-2 border-b border-neutral-200">
-          <div className="flex gap-2 flex-nowrap min-w-full">
+        <div className="w-full border-b border-neutral-200 pb-2 mb-2">
+          <div className="grid grid-cols-3 gap-2 w-full">
             {(['overview', 'heatmap', 'debate'] as const).map((tab) => {
-              const label = tab === 'overview' ? 'Overview' : (tab === 'heatmap' ? 'Roast Receipts' : 'Debate & Rehab');
+              const label = tab === 'overview' ? 'Overview' : (tab === 'heatmap' ? 'Flaws' : 'Debate');
               const isActive = activeTab === tab;
               return (
                 <button
@@ -434,18 +434,18 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       setActiveSection('Summary');
                     }
                   }}
-                  className={`py-2.5 px-4 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-150 flex-shrink-0 flex items-center gap-1.5 active:scale-[0.98] border cursor-pointer ${
+                  className={`py-2.5 px-1 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all duration-150 flex items-center justify-center gap-1 active:scale-[0.98] border cursor-pointer ${
                     isActive 
                       ? 'text-white bg-neutral-900 border-neutral-900 shadow-sm' 
                       : 'text-secondary bg-white border-neutral-200 hover:text-primary'
                   }`}
                 >
-                  {label}
+                  <span className="truncate">{label}</span>
                   {tab === 'heatmap' && (
-                    <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full ${
+                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
                       isActive ? 'bg-accent text-white' : 'bg-error text-white animate-pulse'
                     }`}>
-                      {data.topFixes.length} Flaws
+                      {data.topFixes.length}
                     </span>
                   )}
                 </button>
