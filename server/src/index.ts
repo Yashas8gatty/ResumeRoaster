@@ -257,6 +257,69 @@ function generateHeuristicRoast(resumeText: string): RoastResponse {
   };
 }
 
+const getApiKeys = (): string[] => {
+  const keysStr = process.env.GEMINI_API_KEYS || '';
+  if (keysStr.trim()) {
+    return keysStr.split(',').map(k => k.trim()).filter(k => k.length > 0);
+  }
+  const singleKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || '';
+  return singleKey.trim() && !singleKey.includes('your_') ? [singleKey.trim()] : [];
+};
+
+async function callGeminiWithRotation(
+  systemPrompt: string,
+  userPrompt: string,
+  responseFormatJson: boolean = false,
+  messagesArray: any[] = []
+): Promise<string> {
+  const keys = getApiKeys();
+  if (keys.length === 0) {
+    throw new Error('No API keys configured.');
+  }
+
+  let lastError: any = null;
+
+  for (let i = 0; i < keys.length; i++) {
+    const currentKey = keys[i];
+    console.log(`[ROTATION] Trying API key index ${i + 1}/${keys.length}...`);
+
+    try {
+      const client = new OpenAI({
+        apiKey: currentKey,
+        baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+      });
+
+      const messages = messagesArray.length > 0 ? messagesArray : [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ];
+
+      const options: any = {
+        model: 'gemini-2.5-flash',
+        messages: messages,
+        temperature: 1.0
+      };
+
+      if (responseFormatJson) {
+        options.response_format = { type: 'json_object' };
+      }
+
+      const response = await client.chat.completions.create(options);
+      const content = response.choices[0]?.message?.content;
+      if (content) {
+        console.log(`[ROTATION] Success with key index ${i + 1}!`);
+        return content;
+      }
+      throw new Error('Received empty response from Gemini API.');
+    } catch (err: any) {
+      console.warn(`[ROTATION] Key index ${i + 1} failed. Error:`, err.message || err);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('All API keys failed.');
+}
+
 app.post('/api/roast', upload.single('resume'), async (req: express.Request, res: express.Response) => {
   try {
     if (!req.file) {
@@ -264,8 +327,8 @@ app.post('/api/roast', upload.single('resume'), async (req: express.Request, res
        return;
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
-    const isMock = !apiKey || apiKey === 'your_openai_api_key_here' || apiKey === 'your_gemini_api_key_here' || apiKey.trim() === '';
+    const keys = getApiKeys();
+    const isMock = keys.length === 0;
 
     // Parse PDF to extract text
     let parsedPdf;
@@ -287,7 +350,7 @@ app.post('/api/roast', upload.single('resume'), async (req: express.Request, res
     let isRoastGenerated = false;
 
     if (isMock) {
-      console.log('OpenAI API Key is missing or using default placeholder. Using mock roast response.');
+      console.log('All API keys are missing. Using local heuristic roast response.');
       roastData = generateHeuristicRoast(resumeText);
       isRoastGenerated = true;
     }
@@ -386,23 +449,14 @@ Do not include any markdown backticks (\`\`\`json ... \`\`\`) in your response. 
 
     if (!isRoastGenerated) {
       try {
-        const response = await openai.chat.completions.create({
-          model: 'gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Here is the resume content to roast:\n\n${resumeText}` }
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 1.0
-        });
-
-        const responseText = response.choices[0]?.message?.content;
-        if (!responseText) {
-          throw new Error('Received empty response from OpenAI.');
-        }
+        const responseText = await callGeminiWithRotation(
+          systemPrompt,
+          `Here is the resume content to roast:\n\n${resumeText}`,
+          true
+        );
         roastData = JSON.parse(responseText);
       } catch (apiErr: any) {
-        console.warn('[ROAST] Gemini API call failed (likely Rate Limit 429). Falling back to mock roast. Error:', apiErr.message || apiErr);
+        console.warn('[ROAST] Gemini API call failed (all keys exhausted). Falling back to local heuristics. Error:', apiErr.message || apiErr);
         roastData = generateHeuristicRoast(resumeText);
         isFallbackMock = true;
       }
@@ -474,8 +528,8 @@ app.post('/api/chat', async (req: express.Request, res: express.Response) => {
       return;
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
-    const isMock = !apiKey || apiKey === 'your_openai_api_key_here' || apiKey === 'your_gemini_api_key_here' || apiKey.trim() === '';
+    const requestApiKey = req.headers['x-api-key'] as string || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
+    const isMock = !requestApiKey || requestApiKey === 'your_openai_api_key_here' || requestApiKey === 'your_gemini_api_key_here' || requestApiKey.trim() === '';
 
     if (isMock) {
       const mockReplies = [
@@ -514,20 +568,16 @@ Your goals:
     let reply = "I have nothing to say to that.";
 
     try {
-      const response = await openai.chat.completions.create({
-        model: 'gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemInstruction },
-          ...messages.map((m: any) => ({
-            role: m.role,
-            content: m.content
-          }))
-        ],
-        temperature: 1.0
-      });
-      reply = response.choices[0]?.message?.content || reply;
+      const messagesArray = [
+        { role: 'system', content: systemInstruction },
+        ...messages.map((m: any) => ({
+          role: m.role,
+          content: m.content
+        }))
+      ];
+      reply = await callGeminiWithRotation("", "", false, messagesArray);
     } catch (apiErr) {
-      console.warn('[CHAT] Gemini API chat failed. Falling back to mock recruiter response.', apiErr);
+      console.warn('[CHAT] Gemini API chat failed (all keys exhausted). Falling back to local mock recruiter response.', apiErr);
       const mockReplies = [
         "That's a very cute explanation. Unfortunately, the market doesn't pay for effort, it pays for results.",
         "Oh, you 'coordinated communication'? That's a fancy way of saying you sent emails.",
