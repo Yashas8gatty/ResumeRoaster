@@ -266,11 +266,13 @@ app.post('/api/roast', upload.single('resume'), async (req: express.Request, res
       return;
     }
 
+    let roastData!: RoastResponse;
+    let isRoastGenerated = false;
+
     if (isMock) {
-      console.log('OpenAI API Key is missing or using default placeholder. Returning mock roast response.');
-      const mockResponse = generateHeuristicRoast(resumeText);
-      res.status(200).json(mockResponse);
-      return;
+      console.log('OpenAI API Key is missing or using default placeholder. Using mock roast response.');
+      roastData = generateHeuristicRoast(resumeText);
+      isRoastGenerated = true;
     }
 
     // Create system instruction for OpenAI
@@ -363,27 +365,27 @@ interface RoastResponse {
 
 Do not include any markdown backticks (\`\`\`json ... \`\`\`) in your response. Return ONLY raw valid JSON matching this schema.`;
 
-    let roastData: RoastResponse;
+    if (!isRoastGenerated) {
+      try {
+        const response = await openai.chat.completions.create({
+          model: 'gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Here is the resume content to roast:\n\n${resumeText}` }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 1.0
+        });
 
-    try {
-      const response = await openai.chat.completions.create({
-        model: 'gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Here is the resume content to roast:\n\n${resumeText}` }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 1.0
-      });
-
-      const responseText = response.choices[0]?.message?.content;
-      if (!responseText) {
-        throw new Error('Received empty response from OpenAI.');
+        const responseText = response.choices[0]?.message?.content;
+        if (!responseText) {
+          throw new Error('Received empty response from OpenAI.');
+        }
+        roastData = JSON.parse(responseText);
+      } catch (apiErr: any) {
+        console.warn('[ROAST] Gemini API call failed (likely Rate Limit 429). Falling back to mock roast. Error:', apiErr.message || apiErr);
+        roastData = generateHeuristicRoast(resumeText);
       }
-      roastData = JSON.parse(responseText);
-    } catch (apiErr: any) {
-      console.warn('[ROAST] Gemini API call failed (likely Rate Limit 429). Falling back to mock roast. Error:', apiErr.message || apiErr);
-      roastData = generateHeuristicRoast(resumeText);
     }
 
     roastData.resumeText = resumeText;
