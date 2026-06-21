@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ChevronDown, ChevronUp, CheckCircle2, 
-  Sparkles, Eye, Briefcase, FolderGit2, Cpu, Award, 
+import {
+  ChevronDown, ChevronUp, CheckCircle2,
+  Sparkles, Eye, Briefcase, FolderGit2, Cpu, Award,
   Trash2, PlusCircle, Edit3, ArrowRight, CornerDownRight
 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -66,13 +66,28 @@ const checkProjectDiagnostics = (text: string) => {
 };
 
 const getBulletTag = (text: string) => {
-  const hasMetrics = /[\d%#$]+/g.test(text);
+  const hasActualMetrics = (t: string): boolean => {
+    if (/%|\$|\b\d+x\b|\b\d+\+\b|\b\d+,\d+\b/g.test(t)) return true;
+    const numbers = t.match(/\b\d+\b/g) || [];
+    return numbers.some(num => {
+      const val = parseInt(num, 10);
+      if (val >= 1990 && val <= 2030) return false;
+      if (val < 10) {
+        return /\b\d+\s*(hour|day|week|month|year|developer|person|team|member|fold|times|x)\b/i.test(t.toLowerCase());
+      }
+      return true;
+    });
+  };
+
+  const hasMetrics = hasActualMetrics(text);
   const isPassive = /^(responsible for|assisted|helped|handled|worked on|participated|managed|led)/i.test(text.trim());
-  if (hasMetrics) {
+  const isSimulation = /\b(simulation|simulated|virtual experience|forage|tutorial|course|training)\b/i.test(text);
+
+  if (hasMetrics && !isSimulation) {
     return { label: '🟢 Strong metric', bg: 'bg-emerald-50 text-emerald-950 border border-emerald-250', desc: 'Well-quantified impact.' };
   }
-  if (isPassive) {
-    return { label: '❌ Generic', bg: 'bg-error/10 text-error border border-error/20', desc: 'Uses weak passive phrasing.' };
+  if (isPassive || isSimulation) {
+    return { label: '❌ Generic', bg: 'bg-error/10 text-error border border-error/20', desc: 'Uses weak passive phrasing or simulation.' };
   }
   return { label: '✏️ Needs result', bg: 'bg-warning/10 text-warning border border-warning/20', desc: 'Good task detail but lacks outcome.' };
 };
@@ -84,11 +99,11 @@ interface ResultsViewProps {
 
 const CollapsibleText: React.FC<{ text: string; maxLength?: number }> = ({ text, maxLength = 100 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   if (text.length <= maxLength) {
     return <p className="text-[14px] leading-relaxed">"{text}"</p>;
   }
-  
+
   return (
     <div className="space-y-1">
       <p className="text-[14px] leading-relaxed text-left">
@@ -169,11 +184,11 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
     const text = (data.resumeText || '').toLowerCase();
     const hasHighRank = /\b(1st|2nd|3rd|first|second|third|winner|won|champion|gold\s+medal|silver\s+medal|bronze\s+medal|rank\b|placement|rank\s*:\s*\d+)\b/i.test(text);
     const hasRunnerUp = /\b(runner-up|runner\s+up|runners-up|runners\s+up|runnerup|runnerups)\b/i.test(text);
-    
+
     if (hasHighRank || hasRunnerUp) {
       return 'PRAISE';
     }
-    
+
     if (data.score < 60) return 'SEVERE';
     if (data.score < 75) return 'MODERATE';
     return 'PRAISE';
@@ -278,10 +293,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
 
     const userMsg = chatInput.trim();
     setChatInput('');
-    
+
     const newMessages = [...chatMessages, { role: 'user', content: userMsg } as const];
     setChatMessages(newMessages);
-    
+
     setTimeout(() => {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 50);
@@ -292,7 +307,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
   const handleSendPreset = (question: string) => {
     const newMessages = [...chatMessages, { role: 'user', content: question } as const];
     setChatMessages(newMessages);
-    
+
     setTimeout(() => {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 50);
@@ -316,42 +331,72 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
   // Helper to categorize score text and mood based on score
   const getScoreVerdict = (score: number) => {
     if (score >= 85) {
-      return { 
-        label: "Interview material.", 
-        mood: "📞 Interview", 
-        stamp: "SHORTLIST", 
-        stampColor: "border-success text-success bg-success/5", 
-        verdict: "Kept reading", 
-        caption: "Recoverable." 
+      return {
+        label: "Wait, this is actually good?",
+        mood: "🤯 Recruiter Shocked",
+        stamp: "SHORTLIST",
+        stampColor: "border-success text-success bg-success/5",
+        verdict: "Shortlisted for interview",
+        caption: "Is this a cheat code?"
       };
     }
-    if (score >= 70) {
-      return { 
-        label: "Hesitated.", 
-        mood: "😬 Hesitated", 
-        stamp: "MAYBE", 
-        stampColor: "border-warning text-warning bg-warning/5", 
-        verdict: "Needs revision", 
-        caption: "Recoverable." 
+    if (score >= 75) {
+      return {
+        label: "Solid work, minimal fluff.",
+        mood: "😏 Impressed Nod",
+        stamp: "SHORTLIST",
+        stampColor: "border-success text-success bg-success/5",
+        verdict: "Kept reading, interested",
+        caption: "Slightly reviewable."
+      };
+    }
+    if (score >= 65) {
+      return {
+        label: "Recruiter yawned, but kept it.",
+        mood: "🥱 Mildly Bored",
+        stamp: "MAYBE",
+        stampColor: "border-warning text-warning bg-warning/5",
+        verdict: "Put on hold / Maybe",
+        caption: "Needs actual impact metrics."
       };
     }
     if (score >= 55) {
-      return { 
-        label: "Direct to trash bin.", 
-        mood: "🧐 Kept Reading", 
-        stamp: "MAYBE", 
-        stampColor: "border-warning text-warning bg-warning/5", 
-        verdict: "Direct to trash bin.", 
-        caption: "Recoverable." 
+      return {
+        label: "Close to the trash bin.",
+        mood: "🧐 Eye Roll",
+        stamp: "MAYBE",
+        stampColor: "border-warning text-warning bg-warning/5",
+        verdict: "File under 'Later' (aka Never)",
+        caption: "Needs a complete layout rewrite."
       };
     }
-    return { 
-      label: "Direct to trash bin.", 
-      mood: "💀 Closed Tab", 
-      stamp: "SKIPPED", 
-      stampColor: "border-error text-error bg-error/5", 
-      verdict: "Direct to trash bin.", 
-      caption: "Recoverable." 
+    if (score >= 45) {
+      return {
+        label: "Direct to trash bin.",
+        mood: "🤦‍♂️ Facepalm",
+        stamp: "SKIPPED",
+        stampColor: "border-error text-error bg-error/5",
+        verdict: "Trashed",
+        caption: "Tired of reading this."
+      };
+    }
+    if (score >= 35) {
+      return {
+        label: "Laughed out loud, then deleted.",
+        mood: "😂 Laughing Stock",
+        stamp: "SKIPPED",
+        stampColor: "border-error text-error bg-error/5",
+        verdict: "Shared to group chat to mock",
+        caption: "Comedy gold."
+      };
+    }
+    return {
+      label: "Crime against engineering.",
+      mood: "💀 Closed Tab & Cried",
+      stamp: "SKIPPED",
+      stampColor: "border-error text-error bg-error/5",
+      verdict: "Blocked email address",
+      caption: "Unsalvageable garbage."
     };
   };
 
@@ -360,7 +405,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
   // Dynamic extraction from parsed resume data to avoid any hardcoded mock content
   const summaryText = data.improvedSummary.original || "Professional summary not found.";
   const summaryExplanation = data.improvedSummary.explanation || "Focus on metrics, not aspirations.";
-  
+
 
 
   // Helper to parse fixes into structured Damage Report cards
@@ -409,10 +454,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
 
   if (isMobile) {
     const currentSection = activeSection || 'Summary';
-    
+
     return (
       <div className="w-full px-4 py-4 text-left flex flex-col gap-4 bg-bg selection:bg-accent/10 selection:text-accent overflow-x-hidden">
-        
+
         {/* Title */}
         <div className="flex justify-between items-center mb-2 pb-2 border-b border-neutral-900">
           <div className="space-y-0.5">
@@ -442,17 +487,15 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       setActiveSection('Summary');
                     }
                   }}
-                  className={`py-2.5 px-1 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all duration-150 flex items-center justify-center gap-1 active:scale-[0.98] border cursor-pointer ${
-                    isActive 
-                      ? 'text-white bg-neutral-900 border-neutral-900 shadow-sm' 
-                      : 'text-secondary bg-white border-neutral-200 hover:text-primary'
-                  }`}
+                  className={`py-2.5 px-1 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all duration-150 flex items-center justify-center gap-1 active:scale-[0.98] border cursor-pointer ${isActive
+                    ? 'text-white bg-neutral-900 border-neutral-900 shadow-sm'
+                    : 'text-secondary bg-white border-neutral-200 hover:text-primary'
+                    }`}
                 >
                   <span className="truncate">{label}</span>
                   {tab === 'heatmap' && (
-                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
-                      isActive ? 'bg-accent text-white' : 'bg-error text-white animate-pulse'
-                    }`}>
+                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex-shrink-0 ${isActive ? 'bg-accent text-white' : 'bg-error text-white animate-pulse'
+                      }`}>
                       {data.topFixes.length}
                     </span>
                   )}
@@ -466,11 +509,11 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
         <div className="w-full flex-grow">
           {activeTab === 'overview' && (
             <div className="w-full flex flex-col gap-4">
-              
+
               {/* Score Card */}
               <div className="w-full bg-neutral-900 text-bg p-4 rounded-xl border border-neutral-900 shadow-sm flex items-center justify-between relative overflow-hidden">
                 <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[radial-gradient(#FAF9F6_1px,transparent_1px)] bg-[size:10px_10px]" />
-                
+
                 <div className="absolute right-3 top-3 pointer-events-none rotate-[-6deg] z-10 opacity-90 select-none scale-75 origin-top-right">
                   <div className={`stamp-active font-heading font-black text-sm tracking-widest px-2.5 py-1 border-2 rounded uppercase text-center ${scoreInfo.stampColor}`}>
                     {scoreInfo.stamp}
@@ -482,7 +525,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                     <span className="text-3xl font-black text-white tracking-tighter">{data.score}</span>
                     <span className="text-[9px] font-bold text-neutral-400 mt-0.5 border-t border-neutral-700/60 pt-0.5">/ 100</span>
                   </div>
-                  
+
                   <div className="text-left space-y-0.5 pr-14">
                     <h2 className="text-[15px] font-bold text-white tracking-tight leading-tight">
                       {scoreInfo.verdict}
@@ -501,7 +544,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                 <blockquote className="text-[16px] font-extrabold text-primary tracking-tight leading-relaxed italic">
                   "{data.whatRecruitersThink.quote || 'Your resume says everything except why you\'re useful.'}"
                 </blockquote>
-                
+
                 <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-200 text-left">
                   <div>
                     <span className="text-[12px] font-bold text-secondary uppercase block">Scan Time</span>
@@ -517,9 +560,8 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                   </div>
                   <div>
                     <span className="text-[12px] font-bold text-secondary uppercase block">Odds</span>
-                    <span className={`text-[16px] font-black ${
-                      data.score < 50 ? 'text-error' : (data.score < 75 ? 'text-warning' : 'text-success')
-                    }`}>
+                    <span className={`text-[16px] font-black ${data.score < 50 ? 'text-error' : (data.score < 75 ? 'text-warning' : 'text-success')
+                      }`}>
                       {data.score < 50 ? "Terrible" : (data.score < 75 ? "Maybe" : "High")}
                     </span>
                   </div>
@@ -532,18 +574,16 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                   Session Roasting Notes
                 </h3>
                 <div className="flex flex-col gap-3">
-                  <div className={`p-4 rounded-xl border-2 flex flex-col gap-1.5 text-left ${
-                    data.firstImpression.severity === 'success' ? 'bg-success/[0.04] border-success/40' :
+                  <div className={`p-4 rounded-xl border-2 flex flex-col gap-1.5 text-left ${data.firstImpression.severity === 'success' ? 'bg-success/[0.04] border-success/40' :
                     data.firstImpression.severity === 'warning' ? 'bg-warning/[0.04] border-warning/40' :
-                    'bg-error/[0.04] border-error/40'
-                  }`}>
+                      'bg-error/[0.04] border-error/40'
+                    }`}>
                     <div className="flex items-center gap-2">
                       <span className="text-[12px] font-black text-primary uppercase tracking-wider">First Impression</span>
-                      <span className={`text-[12px] font-black px-1.5 py-0.5 rounded uppercase ${
-                        data.firstImpression.severity === 'success' ? 'bg-success/20 text-success border border-success/30' :
+                      <span className={`text-[12px] font-black px-1.5 py-0.5 rounded uppercase ${data.firstImpression.severity === 'success' ? 'bg-success/20 text-success border border-success/30' :
                         data.firstImpression.severity === 'warning' ? 'bg-warning/20 text-warning border border-warning/30' :
-                        'bg-error/20 text-error border border-error/30'
-                      }`}>
+                          'bg-error/20 text-error border border-error/30'
+                        }`}>
                         {data.firstImpression.severity}
                       </span>
                     </div>
@@ -567,7 +607,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                   <span className="w-2 h-3.5 bg-accent rounded-sm" />
                   Recruiter Speedrun
                 </h3>
-                
+
                 <div className="flex flex-row gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-none">
                   <div className="flex-shrink-0 w-[78vw] bg-neutral-50 p-4 rounded-xl border border-neutral-200 snap-center flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-success/15 text-success flex items-center justify-center font-extrabold text-xs border border-success flex-shrink-0">
@@ -616,7 +656,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
               </div>
 
               {/* Banner / CTA */}
-              <div 
+              <div
                 onClick={() => {
                   setActiveTab('heatmap');
                   setActiveSection('Summary');
@@ -635,7 +675,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                   </p>
                 </div>
                 <button className="w-full h-12 inline-flex items-center justify-center gap-1.5 px-4 text-xs font-black uppercase tracking-wider text-neutral-900 bg-white rounded-xl shadow-sm">
-                  View Margin Notes →
+                  View Roast Receipts →
                 </button>
               </div>
 
@@ -648,7 +688,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                   <Sparkles className="w-4 h-4" />
                   Repair Resume Workshop
                 </button>
-                
+
                 <button
                   onClick={handleShowReceiptsClick}
                   className="w-full h-12 bg-white text-neutral-900 hover:bg-neutral-900 hover:text-white text-[15px] font-black uppercase tracking-wider rounded-xl transition-all border-2 border-neutral-900 shadow-subtle flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
@@ -662,7 +702,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
 
           {activeTab === 'heatmap' && (
             <div className="w-full flex flex-col gap-4">
-              
+
               {/* Horizontal chips for sections */}
               <div className="w-full overflow-x-auto scrollbar-none flex gap-2 pb-2">
                 <div className="flex gap-2 flex-nowrap">
@@ -672,11 +712,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       <button
                         key={section}
                         onClick={() => setActiveSection(section)}
-                        className={`py-2.5 px-4 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-150 flex-shrink-0 cursor-pointer active:scale-[0.98] border ${
-                          isActive 
-                            ? 'text-white bg-neutral-900 border-neutral-900 shadow-sm' 
-                            : 'text-secondary bg-white border-neutral-200 hover:text-primary'
-                        }`}
+                        className={`py-2.5 px-4 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-150 flex-shrink-0 cursor-pointer active:scale-[0.98] border ${isActive
+                          ? 'text-white bg-neutral-900 border-neutral-900 shadow-sm'
+                          : 'text-secondary bg-white border-neutral-200 hover:text-primary'
+                          }`}
                       >
                         {section}
                       </button>
@@ -703,11 +742,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       <span className="text-lg">↓</span>
                     </div>
 
-                    <div className={`p-4 rounded-xl border-2 flex gap-3 ${
-                      getSummarySeverity() === 'SEVERE' ? 'bg-error/5 border-error/20' :
+                    <div className={`p-4 rounded-xl border-2 flex gap-3 ${getSummarySeverity() === 'SEVERE' ? 'bg-error/5 border-error/20' :
                       getSummarySeverity() === 'MODERATE' ? 'bg-amber-50/50 border-amber-900/10' :
-                      'bg-emerald-50/55 border-emerald-950/10'
-                    }`}>
+                        'bg-emerald-50/55 border-emerald-950/10'
+                      }`}>
                       <span className="text-base flex-shrink-0 mt-0.5">
                         {getSummarySeverity() === 'SEVERE' ? '🔥' : getSummarySeverity() === 'MODERATE' ? '⚠️' : '🟢'}
                       </span>
@@ -746,11 +784,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                     {renderReactionBadge(getSkillsSeverity())}
                   </div>
 
-                  <div className={`p-4 rounded-xl border flex gap-3 ${
-                    getSkillsSeverity() === 'SEVERE' ? 'bg-error/5 border-error/15' :
+                  <div className={`p-4 rounded-xl border flex gap-3 ${getSkillsSeverity() === 'SEVERE' ? 'bg-error/5 border-error/15' :
                     getSkillsSeverity() === 'MODERATE' ? 'bg-amber-50/70 border-amber-900/10' :
-                    'bg-emerald-50/70 border-emerald-950/10'
-                  }`}>
+                      'bg-emerald-50/70 border-emerald-950/10'
+                    }`}>
                     <span className="text-base flex-shrink-0">
                       {getSkillsSeverity() === 'SEVERE' ? '🔥' : getSkillsSeverity() === 'MODERATE' ? '⚠️' : '🟢'}
                     </span>
@@ -817,12 +854,11 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       <h3 className="text-[18px] font-black text-primary uppercase">Projects Critique</h3>
                       {renderReactionBadge(getProjectsSeverity())}
                     </div>
-                    
-                    <div className={`p-4 rounded-xl border flex gap-3 ${
-                      getProjectsSeverity() === 'SEVERE' ? 'bg-error/5 border-error/15' :
+
+                    <div className={`p-4 rounded-xl border flex gap-3 ${getProjectsSeverity() === 'SEVERE' ? 'bg-error/5 border-error/15' :
                       getProjectsSeverity() === 'MODERATE' ? 'bg-amber-50/70 border-amber-900/10' :
-                      'bg-emerald-50/70 border-emerald-950/10'
-                    }`}>
+                        'bg-emerald-50/70 border-emerald-950/10'
+                      }`}>
                       <span className="text-base flex-shrink-0">
                         {getProjectsSeverity() === 'SEVERE' ? '🔥' : getProjectsSeverity() === 'MODERATE' ? '⚠️' : '🟢'}
                       </span>
@@ -842,11 +878,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       <div key={pIdx} className="bg-white rounded-xl border border-neutral-900 shadow-sm p-4 flex flex-col gap-4 text-left">
                         <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
                           <span className="text-[14px] font-bold text-primary">Project #{pIdx + 1}</span>
-                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
-                            projectItemSeverity === 'SEVERE' ? 'bg-error/10 text-error' :
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${projectItemSeverity === 'SEVERE' ? 'bg-error/10 text-error' :
                             projectItemSeverity === 'MODERATE' ? 'bg-warning/10 text-warning' :
-                            'bg-success/15 text-success'
-                          }`}>
+                              'bg-success/15 text-success'
+                            }`}>
                             {projectItemSeverity}
                           </span>
                         </div>
@@ -860,27 +895,23 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                           <div className="space-y-1.5">
                             <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">Diagnostics Checklist</span>
                             <div className="grid grid-cols-2 gap-2 pt-1">
-                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${
-                                diag.hasMetrics ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
-                              }`}>
+                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${diag.hasMetrics ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
+                                }`}>
                                 <span>{diag.hasMetrics ? '✅' : '❌'}</span>
                                 <span>Metrics</span>
                               </div>
-                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${
-                                diag.hasImpact ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
-                              }`}>
+                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${diag.hasImpact ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
+                                }`}>
                                 <span>{diag.hasImpact ? '✅' : '❌'}</span>
                                 <span>Impact</span>
                               </div>
-                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${
-                                diag.hasTechDecisions ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
-                              }`}>
+                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${diag.hasTechDecisions ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
+                                }`}>
                                 <span>{diag.hasTechDecisions ? '✅' : '❌'}</span>
                                 <span>Tech decisions</span>
                               </div>
-                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${
-                                diag.hasUsers ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
-                              }`}>
+                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${diag.hasUsers ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
+                                }`}>
                                 <span>{diag.hasUsers ? '✅' : '❌'}</span>
                                 <span>Users / Scale</span>
                               </div>
@@ -891,16 +922,14 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                             <span className="text-lg">↓</span>
                           </div>
 
-                          <div className={`border p-4 rounded-xl text-left ${
-                            projectItemSeverity === 'SEVERE' ? 'bg-error/5 border-error/10' :
+                          <div className={`border p-4 rounded-xl text-left ${projectItemSeverity === 'SEVERE' ? 'bg-error/5 border-error/10' :
                             projectItemSeverity === 'MODERATE' ? 'bg-accent/5 border-accent/15' :
-                            'bg-success/5 border-success/15'
-                          }`}>
-                            <span className={`text-[11px] font-bold uppercase tracking-wider block mb-1 ${
-                              projectItemSeverity === 'SEVERE' ? 'text-error' :
-                              projectItemSeverity === 'MODERATE' ? 'text-accent' :
-                              'text-success'
+                              'bg-success/5 border-success/15'
                             }`}>
+                            <span className={`text-[11px] font-bold uppercase tracking-wider block mb-1 ${projectItemSeverity === 'SEVERE' ? 'text-error' :
+                              projectItemSeverity === 'MODERATE' ? 'text-accent' :
+                                'text-success'
+                              }`}>
                               {projectItemSeverity} CRITIQUE
                             </span>
                             <p className="font-heading font-bold italic text-[16px] text-primary leading-relaxed">
@@ -934,12 +963,11 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       <h3 className="text-[18px] font-black text-primary uppercase">Experience Critique</h3>
                       {renderReactionBadge(getExperienceSeverity())}
                     </div>
-                    
-                    <div className={`p-4 rounded-xl border flex gap-3 ${
-                      getExperienceSeverity() === 'SEVERE' ? 'bg-error/5 border-error/15' :
+
+                    <div className={`p-4 rounded-xl border flex gap-3 ${getExperienceSeverity() === 'SEVERE' ? 'bg-error/5 border-error/15' :
                       getExperienceSeverity() === 'MODERATE' ? 'bg-amber-50/70 border-amber-900/10' :
-                      'bg-emerald-50/70 border-emerald-950/10'
-                    }`}>
+                        'bg-emerald-50/70 border-emerald-950/10'
+                      }`}>
                       <span className="text-base flex-shrink-0">
                         {getExperienceSeverity() === 'SEVERE' ? '🔥' : getExperienceSeverity() === 'MODERATE' ? '⚠️' : '🟢'}
                       </span>
@@ -962,11 +990,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                             <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider ${tag.bg}`}>
                               {tag.label}
                             </span>
-                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
-                              expItemSeverity === 'SEVERE' ? 'bg-error/10 text-error' :
+                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${expItemSeverity === 'SEVERE' ? 'bg-error/10 text-error' :
                               expItemSeverity === 'MODERATE' ? 'bg-warning/10 text-warning' :
-                              'bg-success/15 text-success'
-                            }`}>
+                                'bg-success/15 text-success'
+                              }`}>
                               {expItemSeverity}
                             </span>
                           </div>
@@ -982,16 +1009,14 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                             <span className="text-lg">↓</span>
                           </div>
 
-                          <div className={`border p-4 rounded-xl text-left ${
-                            expItemSeverity === 'SEVERE' ? 'bg-error/5 border-error/10' :
+                          <div className={`border p-4 rounded-xl text-left ${expItemSeverity === 'SEVERE' ? 'bg-error/5 border-error/10' :
                             expItemSeverity === 'MODERATE' ? 'bg-accent/5 border-accent/15' :
-                            'bg-success/5 border-success/15'
-                          }`}>
-                            <span className={`text-[11px] font-bold uppercase tracking-wider block mb-1 ${
-                              expItemSeverity === 'SEVERE' ? 'text-error' :
-                              expItemSeverity === 'MODERATE' ? 'text-accent' :
-                              'text-success'
+                              'bg-success/5 border-success/15'
                             }`}>
+                            <span className={`text-[11px] font-bold uppercase tracking-wider block mb-1 ${expItemSeverity === 'SEVERE' ? 'text-error' :
+                              expItemSeverity === 'MODERATE' ? 'text-accent' :
+                                'text-success'
+                              }`}>
                               {expItemSeverity} OBSERVATION
                             </span>
                             <p className="font-heading font-bold italic text-[16px] text-primary leading-relaxed">
@@ -1080,16 +1105,16 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       <h4 className="text-[14px] font-bold text-primary uppercase tracking-wide">Recruiter Assessment</h4>
                       {renderReactionBadge(getVerdictSeverity())}
                     </div>
-                    
+
                     <p className="font-heading font-bold italic text-[16px] text-primary leading-relaxed">
-                      {data.score >= 85 
+                      {data.score >= 85
                         ? "Excellent structure and strong credentials. With minor tweaks to wording, you are ready to apply."
                         : data.score >= 70
                           ? "Reasonable base, but key impact indicators are missing. Fix the flagged items before submitting."
                           : "Critical issues found. A recruiter will likely skip this within 7 seconds. Extensive revision needed."
                       }
                     </p>
-                    
+
                     <p className="text-[12px] text-secondary leading-relaxed">
                       {data.whatRecruitersThink.critique}
                     </p>
@@ -1100,7 +1125,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       <h4 className="text-[12px] font-bold text-secondary uppercase tracking-widest">Candidate Resume Score</h4>
                       <p className="text-[11px] text-secondary leading-normal">Formatting, keywords, and metric density scan.</p>
                     </div>
-                    
+
                     <div className="flex items-center gap-3 flex-shrink-0">
                       <div className="relative w-12 h-12 rounded-full border-2 border-neutral-200 flex items-center justify-center font-black text-md text-primary bg-neutral-50 shadow-inner">
                         {data.score}
@@ -1122,16 +1147,14 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                           </div>
                           <div className="space-y-1.5 flex-grow">
                             <div className="flex items-center gap-1.5">
-                              <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
-                                fix.action === 'REMOVE' ? 'bg-error/10 text-error' :
+                              <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${fix.action === 'REMOVE' ? 'bg-error/10 text-error' :
                                 fix.action === 'ADD' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
-                              }`}>
+                                }`}>
                                 {fix.action}
                               </span>
-                              <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${
-                                fix.impact === 'HIGH' ? 'bg-error text-white' :
+                              <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${fix.impact === 'HIGH' ? 'bg-error text-white' :
                                 fix.impact === 'MEDIUM' ? 'bg-warning text-white' : 'bg-secondary text-white'
-                              }`}>
+                                }`}>
                                 {fix.impact} IMPACT
                               </span>
                             </div>
@@ -1161,7 +1184,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
 
           {activeTab === 'debate' && (
             <div className="w-full flex flex-col gap-5 pb-24 text-left">
-              
+
               {/* Debate Recruiter Chat widget */}
               <div className="w-full bg-white p-4 rounded-xl border border-neutral-900 shadow-sm flex flex-col gap-4">
                 <div className="space-y-1">
@@ -1193,11 +1216,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                           </div>
                         )}
                         <div
-                          className={`p-3 rounded-xl border text-[12px] leading-relaxed shadow-sm ${
-                            msg.role === 'user'
-                              ? 'bg-white border-neutral-900 text-primary rounded-tr-none'
-                              : 'bg-neutral-950 border-neutral-950 text-white rounded-tl-none font-medium'
-                          }`}
+                          className={`p-3 rounded-xl border text-[12px] leading-relaxed shadow-sm ${msg.role === 'user'
+                            ? 'bg-white border-neutral-900 text-primary rounded-tr-none'
+                            : 'bg-neutral-950 border-neutral-950 text-white rounded-tl-none font-medium'
+                            }`}
                         >
                           {msg.content}
                         </div>
@@ -1247,7 +1269,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-center text-secondary py-1">
                     <span className="text-lg">↓</span>
                   </div>
@@ -1275,7 +1297,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                   </h3>
                   <span className="text-[11px] text-secondary font-semibold">Swipe cards →</span>
                 </div>
-                
+
                 <div className="flex flex-row overflow-x-auto snap-x snap-mandatory flex-nowrap gap-4 pb-2 scrollbar-none">
                   {[...data.experience.items, ...data.projects.items].map((item, idx) => (
                     <div key={idx} className="flex-shrink-0 w-[82vw] snap-center border border-neutral-900 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col justify-between">
@@ -1368,7 +1390,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
 
   return (
     <div className="w-full max-w-[1500px] mx-auto px-10 py-4 text-left">
-      
+
       {/* HEADER SECTION */}
       <div className="flex justify-between items-end mb-12 border-b border-neutral-900 pb-4">
         <div className="space-y-0.5">
@@ -1393,24 +1415,21 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-2 px-5 text-xs font-black uppercase tracking-wider relative transition-all duration-200 rounded-medium cursor-pointer flex items-center gap-2 ${
-                  isActive 
-                    ? 'text-white bg-neutral-900 shadow-subtle scale-[1.02]' 
-                    : 'text-secondary hover:text-primary hover:bg-neutral-200/50'
-                }`}
+                className={`py-2 px-5 text-xs font-black uppercase tracking-wider relative transition-all duration-200 rounded-medium cursor-pointer flex items-center gap-2 ${isActive
+                  ? 'text-white bg-neutral-900 shadow-subtle scale-[1.02]'
+                  : 'text-secondary hover:text-primary hover:bg-neutral-200/50'
+                  }`}
               >
                 {label}
                 {tab === 'heatmap' && (
-                  <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 ${
-                    isActive ? 'bg-accent text-white' : 'bg-error text-white animate-pulse'
-                  }`}>
+                  <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors flex items-center gap-1 ${isActive ? 'bg-accent text-white' : 'bg-error text-white animate-pulse'
+                    }`}>
                     {data.topFixes.length} Flaws 🔥
                   </span>
                 )}
                 {tab === 'debate' && (
-                  <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors ${
-                    isActive ? 'bg-neutral-800 text-neutral-100' : 'bg-neutral-200 text-neutral-800'
-                  }`}>
+                  <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full transition-colors ${isActive ? 'bg-neutral-800 text-neutral-100' : 'bg-neutral-200 text-neutral-800'
+                    }`}>
                     Rehab
                   </span>
                 )}
@@ -1432,255 +1451,252 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
           >
             {/* TOP GRID: Score Card & Damage Report */}
             <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 mb-12">
-        
-        {/* Score Card (Subtle Dark Texture, High-Contrast) */}
-        <div className="lg:col-span-3 bg-neutral-900 text-bg p-8 rounded-large border-2 border-neutral-900 shadow-subtle flex flex-col items-center justify-between text-center min-h-[420px] relative overflow-hidden">
-          {/* Subtle noise pattern inside card */}
-          <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[radial-gradient(#FAF9F6_1px,transparent_1px)] bg-[size:10px_10px]" />
-          
-          <div className="w-full relative z-10">
-            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-4">Final Score</span>
-            
-            {/* Circular Ring and Large Stacked Score */}
-            <div className="relative w-40 h-40 mx-auto flex items-center justify-center mb-4">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="72"
-                  className="stroke-neutral-800 fill-none"
-                  strokeWidth="2"
-                />
-                <motion.circle
-                  cx="80"
-                  cy="80"
-                  r="72"
-                  className="stroke-accent fill-none"
-                  strokeWidth="3.5"
-                  strokeDasharray={452}
-                  initial={{ strokeDashoffset: 452 }}
-                  animate={{ strokeDashoffset: 452 - (452 * data.score) / 100 }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute flex flex-col items-center justify-center leading-none">
-                <span className="text-6xl font-black text-white tracking-tighter">{data.score}</span>
-                <span className="text-[11px] font-bold text-neutral-400 mt-1 border-t border-neutral-800 pt-1">/ 100</span>
-              </div>
-            </div>
 
-            <h2 className="text-lg font-bold text-white tracking-tight mb-2">
-              {scoreInfo.verdict}
-            </h2>
-            
-            <p className="text-[10px] text-neutral-400 italic block mb-4">
-              {scoreInfo.caption}
-            </p>
-            
-            {/* Recruiter Mood */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-xs font-semibold text-neutral-300">
-              <span className="text-neutral-400">Recruiter mood:</span>
-              <span className="text-white font-bold">{scoreInfo.mood}</span>
-            </div>
+              {/* Score Card (Subtle Dark Texture, High-Contrast) */}
+              <div className="lg:col-span-3 bg-neutral-900 text-bg p-8 rounded-large border-2 border-neutral-900 shadow-subtle flex flex-col items-center justify-between text-center min-h-[420px] relative overflow-hidden">
+                {/* Subtle noise pattern inside card */}
+                <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[radial-gradient(#FAF9F6_1px,transparent_1px)] bg-[size:10px_10px]" />
 
-            {/* Diagnostics counters */}
-            <div className="w-full mt-4 pt-4 border-t border-neutral-800 text-left space-y-2">
-              <span className="text-[9px] font-black text-neutral-400 uppercase tracking-wider block">Session Diagnostics</span>
-              <div className="flex justify-between items-center text-xs text-neutral-300">
-                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-error" /> ATS Alerts:</span>
-                <span className="font-extrabold text-white">{data.atsCompatibility.issues.length}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs text-neutral-300">
-                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-warning" /> Weak Spots:</span>
-                <span className="font-extrabold text-white">{data.topFixes.length}</span>
-              </div>
-            </div>
-          </div>
+                <div className="w-full relative z-10">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-4">Final Score</span>
 
-          {/* Action buttons */}
-          <div className="w-full space-y-2 mt-6 relative z-10">
-            <button
-              onClick={handleFixResumeClick}
-              className="w-full py-3 bg-accent hover:bg-accent/90 text-white text-xs font-bold rounded-medium transition-all shadow-subtle flex items-center justify-center gap-2 cursor-pointer border border-accent"
-            >
-              <Sparkles className="w-4 h-4" />
-              Repair Resume
-            </button>
-            <button
-              onClick={handleShowReceiptsClick}
-              className="w-full py-3 bg-white text-neutral-900 hover:bg-neutral-900 hover:text-white text-xs font-black uppercase tracking-wider rounded-medium transition-all border-2 border-neutral-900 shadow-subtle flex items-center justify-center gap-1 cursor-pointer"
-            >
-              Inspect Roast Receipts →
-            </button>
-          </div>
-        </div>
-
-        {/* Right Column: Recruiter Session Details (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-           
-           {/* Recruiter Reaction Card */}
-           <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-8 min-h-[190px] text-left">
-              {/* Stamp overlay */}
-              <div className="absolute right-[5%] top-[15%] pointer-events-none rotate-[-8deg] z-10 opacity-90 select-none">
-                <div className={`stamp-active font-heading font-black text-2xl tracking-widest px-4 py-1.5 border-4 rounded uppercase text-center ${scoreInfo.stampColor}`}>
-                  {scoreInfo.stamp}
-                </div>
-              </div>
-              <div className="max-w-2xl relative z-10">
-                <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-3">Recruiter Reaction</span>
-                <blockquote className="text-lg sm:text-xl font-extrabold text-primary tracking-tight leading-relaxed italic mb-4">
-                  "{data.whatRecruitersThink.quote || 'Your resume says everything except why you\'re useful.'}"
-                </blockquote>
-                <div className="flex flex-wrap gap-6 pt-3 border-t border-neutral-200">
-                  <div>
-                    <span className="text-[9px] font-bold text-secondary uppercase block">Scan Time</span>
-                    <span className="text-base font-black text-primary">
-                      {data.score < 50 ? "2.4s" : (data.score < 75 ? "4.1s" : "6.8s")}
-                    </span>
+                  {/* Circular Ring and Large Stacked Score */}
+                  <div className="relative w-40 h-40 mx-auto flex items-center justify-center mb-4">
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle
+                        cx="80"
+                        cy="80"
+                        r="72"
+                        className="stroke-neutral-800 fill-none"
+                        strokeWidth="2"
+                      />
+                      <motion.circle
+                        cx="80"
+                        cy="80"
+                        r="72"
+                        className="stroke-accent fill-none"
+                        strokeWidth="3.5"
+                        strokeDasharray={452}
+                        initial={{ strokeDashoffset: 452 }}
+                        animate={{ strokeDashoffset: 452 - (452 * data.score) / 100 }}
+                        transition={{ duration: 1.2, ease: "easeOut" }}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute flex flex-col items-center justify-center leading-none">
+                      <span className="text-6xl font-black text-white tracking-tighter">{data.score}</span>
+                      <span className="text-[11px] font-bold text-neutral-400 mt-1 border-t border-neutral-800 pt-1">/ 100</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[9px] font-bold text-secondary uppercase block">Memory Score</span>
-                    <span className="text-base font-black text-primary">
-                      {Math.max(8, data.score - 45)}%
-                    </span>
+
+                  <h2 className="text-lg font-bold text-white tracking-tight mb-2">
+                    {scoreInfo.verdict}
+                  </h2>
+
+                  <p className="text-[10px] text-neutral-400 italic block mb-4">
+                    {scoreInfo.caption}
+                  </p>
+
+                  {/* Recruiter Mood */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-xs font-semibold text-neutral-300">
+                    <span className="text-neutral-400">Recruiter mood:</span>
+                    <span className="text-white font-bold">{scoreInfo.mood}</span>
                   </div>
-                  <div>
-                    <span className="text-[9px] font-bold text-secondary uppercase block">Interview Odds</span>
-                    <span className={`text-base font-black ${
-                      data.score < 50 ? 'text-error' : (data.score < 75 ? 'text-warning' : 'text-success')
-                    }`}>
-                      {data.score < 50 ? "Terrible" : (data.score < 75 ? "Maybe" : "High")}
-                    </span>
+
+                  {/* Diagnostics counters */}
+                  <div className="w-full mt-4 pt-4 border-t border-neutral-800 text-left space-y-2">
+                    <span className="text-[9px] font-black text-neutral-400 uppercase tracking-wider block">Session Diagnostics</span>
+                    <div className="flex justify-between items-center text-xs text-neutral-300">
+                      <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-error" /> ATS Alerts:</span>
+                      <span className="font-extrabold text-white">{data.atsCompatibility.issues.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-neutral-300">
+                      <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-warning" /> Weak Spots:</span>
+                      <span className="font-extrabold text-white">{data.topFixes.length}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-           </div>
 
-           {/* Recruiter Session Notes */}
-           <div className="bg-white p-8 rounded-large border-2 border-neutral-900 border-l-[12px] border-l-accent shadow-subtle space-y-4">
-             <h3 className="text-lg font-black text-primary uppercase tracking-tight text-left">
-               Session Roasting Notes
-             </h3>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className={`p-5 rounded-medium border-2 space-y-2 text-left transition-all ${
-                 data.firstImpression.severity === 'success' ? 'bg-success/[0.04] border-success/40 shadow-[0_0_10px_rgba(16,185,129,0.03)]' :
-                 data.firstImpression.severity === 'warning' ? 'bg-warning/[0.04] border-warning/40 shadow-[0_0_10px_rgba(245,158,11,0.03)]' :
-                 'bg-error/[0.04] border-error/40 shadow-[0_0_10px_rgba(239,68,68,0.03)]'
-               }`}>
-                 <div className="flex items-center gap-2">
-                   <span className="text-xs font-black text-primary uppercase tracking-wider">First Impression</span>
-                   <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase ${
-                     data.firstImpression.severity === 'success' ? 'bg-success/20 text-success border-2 border-success/30' :
-                     data.firstImpression.severity === 'warning' ? 'bg-warning/20 text-warning border-2 border-warning/30' :
-                     'bg-error/20 text-error border-2 border-error/30'
-                   }`}>
-                     {data.firstImpression.severity}
-                   </span>
-                 </div>
-                 <p className="text-sm sm:text-base font-black text-neutral-900 leading-relaxed italic">
-                   "{data.firstImpression.critique}"
-                 </p>
-               </div>
-
-               <div className="p-5 rounded-medium border-2 border-accent/40 bg-accent/[0.04] shadow-[0_0_10px_rgba(237,98,44,0.03)] space-y-2 text-left transition-all">
-                 <span className="text-xs font-black text-primary uppercase tracking-wider block">Recruiter Mindset</span>
-                 <p className="text-sm sm:text-base font-black text-neutral-900 leading-relaxed italic">
-                   "{data.whatRecruitersThink.critique}"
-                 </p>
-               </div>
-             </div>
-           </div>
-
-           {/* Recruiter Speedrun */}
-           <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle text-left">
-             <h3 className="text-base font-black text-primary flex items-center gap-2 mb-8">
-               <span className="w-2.5 h-4 bg-accent rounded-sm" />
-               Recruiter Speedrun
-             </h3>
-             
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
-               <div className="hidden md:block absolute top-[18px] left-[6%] right-[6%] h-0.5 bg-neutral-200 -z-10" />
-
-               {/* 0s */}
-               <div className="flex md:flex-col items-start gap-4 md:gap-0">
-                 <div className="w-9 h-9 rounded-full bg-success/15 text-success flex items-center justify-center font-extrabold text-xs border border-success md:mb-4 flex-shrink-0">
-                   ✓
-                 </div>
-                 <div>
-                   <span className="text-[10px] font-bold text-secondary uppercase tracking-wider block">0 Seconds</span>
-                   <h4 className="text-sm font-bold text-primary">Saw title</h4>
-                   <p className="text-[11px] text-secondary leading-normal">Categorized candidate.</p>
-                 </div>
-               </div>
-
-               {/* 2s */}
-               <div className="flex md:flex-col items-start gap-4 md:gap-0">
-                 <div className="w-9 h-9 rounded-full bg-error/15 text-error flex items-center justify-center font-extrabold text-xs border border-error md:mb-4 flex-shrink-0">
-                   ✗
-                 </div>
-                 <div>
-                   <span className="text-[10px] font-bold text-secondary uppercase tracking-wider block">2 Seconds</span>
-                   <h4 className="text-sm font-bold text-primary text-error">Skipped summary</h4>
-                   <p className="text-[11px] text-secondary leading-normal">Lost immediate attention.</p>
-                 </div>
-               </div>
-
-               {/* 4s */}
-               <div className="flex md:flex-col items-start gap-4 md:gap-0">
-                 <div className="w-9 h-9 rounded-full bg-success/15 text-success flex items-center justify-center font-extrabold text-xs border border-success md:mb-4 flex-shrink-0">
-                   ✓
-                 </div>
-                 <div>
-                   <span className="text-[10px] font-bold text-secondary uppercase tracking-wider block">4 Seconds</span>
-                   <h4 className="text-sm font-bold text-primary">Read core stack</h4>
-                   <p className="text-[11px] text-secondary leading-normal">Identified raw skills.</p>
-                 </div>
-               </div>
-
-               {/* 7s */}
-               <div className="flex md:flex-col items-start gap-4 md:gap-0">
-                 <div className="w-9 h-9 rounded-full bg-error/15 text-error flex items-center justify-center font-extrabold text-xs border border-error md:mb-4 flex-shrink-0">
-                   ✗
-                 </div>
-                 <div>
-                   <span className="text-[10px] font-bold text-secondary uppercase tracking-wider block">7 Seconds</span>
-                   <h4 className="text-sm font-bold text-primary text-error">Tab closed</h4>
-                   <p className="text-[11px] text-secondary leading-normal">Failed to seal follow-up.</p>
-                 </div>
-               </div>
-             </div>
-           </div>
-
-            {/* Section Critique CTA Banner */}
-            <motion.div 
-              whileHover={{ y: -2 }}
-              onClick={() => setActiveTab('heatmap')}
-              className="bg-neutral-900 text-white p-8 rounded-large border-2 border-neutral-900 shadow-subtle flex flex-col md:flex-row justify-between items-start md:items-center gap-6 cursor-pointer group transition-all relative overflow-hidden text-left"
-            >
-              {/* Background soft orange light effect */}
-              <div className="absolute right-0 top-0 w-64 h-64 bg-accent/15 rounded-full blur-3xl -z-10" />
-              
-              <div className="space-y-1.5 text-left max-w-xl">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-accent uppercase tracking-widest block bg-accent/20 px-2 py-0.5 rounded">Margin Notes Ready</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-error animate-ping" />
+                {/* Action buttons */}
+                <div className="w-full space-y-2 mt-6 relative z-10">
+                  <button
+                    onClick={handleFixResumeClick}
+                    className="w-full py-3 bg-accent hover:bg-accent/90 text-white text-xs font-bold rounded-medium transition-all shadow-subtle flex items-center justify-center gap-2 cursor-pointer border border-accent"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Repair Resume
+                  </button>
+                  <button
+                    onClick={handleShowReceiptsClick}
+                    className="w-full py-3 bg-white text-neutral-900 hover:bg-neutral-900 hover:text-white text-xs font-black uppercase tracking-wider rounded-medium transition-all border-2 border-neutral-900 shadow-subtle flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    Inspect Roast Receipts →
+                  </button>
                 </div>
-                <h3 className="text-lg font-black tracking-tight text-white uppercase">Inspect Section-by-Section Critique</h3>
-                <p className="text-xs text-neutral-300 leading-relaxed">
-                  We annotated your resume exactly like a recruiter. See which bullet points are generic, which skills you must scrap, and read the brutal section-by-section breakdown.
-                </p>
               </div>
-              
-              <div className="flex-shrink-0 w-full md:w-auto">
-                <span className="inline-flex items-center justify-center gap-1.5 px-5 py-3 text-xs font-black uppercase tracking-wider text-neutral-900 bg-white hover:bg-neutral-100 rounded-medium shadow-sm transition-all group-hover:translate-x-1.5">
-                  View Margin Notes →
-                </span>
-              </div>
-            </motion.div>
-         </div>
 
-      </div>
+              {/* Right Column: Recruiter Session Details (7 cols) */}
+              <div className="lg:col-span-7 space-y-6">
+
+                {/* Recruiter Reaction Card */}
+                <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-8 min-h-[190px] text-left">
+                  {/* Stamp overlay */}
+                  <div className="absolute right-[5%] top-[15%] pointer-events-none rotate-[-8deg] z-10 opacity-90 select-none">
+                    <div className={`stamp-active font-heading font-black text-2xl tracking-widest px-4 py-1.5 border-4 rounded uppercase text-center ${scoreInfo.stampColor}`}>
+                      {scoreInfo.stamp}
+                    </div>
+                  </div>
+                  <div className="max-w-2xl relative z-10">
+                    <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block mb-3">Recruiter Reaction</span>
+                    <blockquote className="text-lg sm:text-xl font-extrabold text-primary tracking-tight leading-relaxed italic mb-4">
+                      "{data.whatRecruitersThink.quote || 'Your resume says everything except why you\'re useful.'}"
+                    </blockquote>
+                    <div className="flex flex-wrap gap-6 pt-3 border-t border-neutral-200">
+                      <div>
+                        <span className="text-[9px] font-bold text-secondary uppercase block">Scan Time</span>
+                        <span className="text-base font-black text-primary">
+                          {data.score < 50 ? "2.4s" : (data.score < 75 ? "4.1s" : "6.8s")}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-secondary uppercase block">Memory Score</span>
+                        <span className="text-base font-black text-primary">
+                          {Math.max(8, data.score - 45)}%
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-secondary uppercase block">Interview Odds</span>
+                        <span className={`text-base font-black ${data.score < 50 ? 'text-error' : (data.score < 75 ? 'text-warning' : 'text-success')
+                          }`}>
+                          {data.score < 50 ? "Terrible" : (data.score < 75 ? "Maybe" : "High")}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recruiter Session Notes */}
+                <div className="bg-white p-8 rounded-large border-2 border-neutral-900 border-l-[12px] border-l-accent shadow-subtle space-y-4">
+                  <h3 className="text-lg font-black text-primary uppercase tracking-tight text-left">
+                    Session Roasting Notes
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className={`p-5 rounded-medium border-2 space-y-2 text-left transition-all ${data.firstImpression.severity === 'success' ? 'bg-success/[0.04] border-success/40 shadow-[0_0_10px_rgba(16,185,129,0.03)]' :
+                      data.firstImpression.severity === 'warning' ? 'bg-warning/[0.04] border-warning/40 shadow-[0_0_10px_rgba(245,158,11,0.03)]' :
+                        'bg-error/[0.04] border-error/40 shadow-[0_0_10px_rgba(239,68,68,0.03)]'
+                      }`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-primary uppercase tracking-wider">First Impression</span>
+                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase ${data.firstImpression.severity === 'success' ? 'bg-success/20 text-success border-2 border-success/30' :
+                          data.firstImpression.severity === 'warning' ? 'bg-warning/20 text-warning border-2 border-warning/30' :
+                            'bg-error/20 text-error border-2 border-error/30'
+                          }`}>
+                          {data.firstImpression.severity}
+                        </span>
+                      </div>
+                      <p className="text-sm sm:text-base font-black text-neutral-900 leading-relaxed italic">
+                        "{data.firstImpression.critique}"
+                      </p>
+                    </div>
+
+                    <div className="p-5 rounded-medium border-2 border-accent/40 bg-accent/[0.04] shadow-[0_0_10px_rgba(237,98,44,0.03)] space-y-2 text-left transition-all">
+                      <span className="text-xs font-black text-primary uppercase tracking-wider block">Recruiter Mindset</span>
+                      <p className="text-sm sm:text-base font-black text-neutral-900 leading-relaxed italic">
+                        "{data.whatRecruitersThink.critique}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recruiter Speedrun */}
+                <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle text-left">
+                  <h3 className="text-base font-black text-primary flex items-center gap-2 mb-8">
+                    <span className="w-2.5 h-4 bg-accent rounded-sm" />
+                    Recruiter Speedrun
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
+                    <div className="hidden md:block absolute top-[18px] left-[6%] right-[6%] h-0.5 bg-neutral-200 -z-10" />
+
+                    {/* 0s */}
+                    <div className="flex md:flex-col items-start gap-4 md:gap-0">
+                      <div className="w-9 h-9 rounded-full bg-success/15 text-success flex items-center justify-center font-extrabold text-xs border border-success md:mb-4 flex-shrink-0">
+                        ✓
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-secondary uppercase tracking-wider block">0 Seconds</span>
+                        <h4 className="text-sm font-bold text-primary">Saw title</h4>
+                        <p className="text-[11px] text-secondary leading-normal">Categorized candidate.</p>
+                      </div>
+                    </div>
+
+                    {/* 2s */}
+                    <div className="flex md:flex-col items-start gap-4 md:gap-0">
+                      <div className="w-9 h-9 rounded-full bg-error/15 text-error flex items-center justify-center font-extrabold text-xs border border-error md:mb-4 flex-shrink-0">
+                        ✗
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-secondary uppercase tracking-wider block">2 Seconds</span>
+                        <h4 className="text-sm font-bold text-primary text-error">Skipped summary</h4>
+                        <p className="text-[11px] text-secondary leading-normal">Lost immediate attention.</p>
+                      </div>
+                    </div>
+
+                    {/* 4s */}
+                    <div className="flex md:flex-col items-start gap-4 md:gap-0">
+                      <div className="w-9 h-9 rounded-full bg-success/15 text-success flex items-center justify-center font-extrabold text-xs border border-success md:mb-4 flex-shrink-0">
+                        ✓
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-secondary uppercase tracking-wider block">4 Seconds</span>
+                        <h4 className="text-sm font-bold text-primary">Read core stack</h4>
+                        <p className="text-[11px] text-secondary leading-normal">Identified raw skills.</p>
+                      </div>
+                    </div>
+
+                    {/* 7s */}
+                    <div className="flex md:flex-col items-start gap-4 md:gap-0">
+                      <div className="w-9 h-9 rounded-full bg-error/15 text-error flex items-center justify-center font-extrabold text-xs border border-error md:mb-4 flex-shrink-0">
+                        ✗
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-secondary uppercase tracking-wider block">7 Seconds</span>
+                        <h4 className="text-sm font-bold text-primary text-error">Tab closed</h4>
+                        <p className="text-[11px] text-secondary leading-normal">Failed to seal follow-up.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section Critique CTA Banner */}
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  onClick={() => setActiveTab('heatmap')}
+                  className="bg-neutral-900 text-white p-8 rounded-large border-2 border-neutral-900 shadow-subtle flex flex-col md:flex-row justify-between items-start md:items-center gap-6 cursor-pointer group transition-all relative overflow-hidden text-left"
+                >
+                  {/* Background soft orange light effect */}
+                  <div className="absolute right-0 top-0 w-64 h-64 bg-accent/15 rounded-full blur-3xl -z-10" />
+
+                  <div className="space-y-1.5 text-left max-w-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-accent uppercase tracking-widest block bg-accent/20 px-2 py-0.5 rounded">Margin Notes Ready</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-error animate-ping" />
+                    </div>
+                    <h3 className="text-lg font-black tracking-tight text-white uppercase">Inspect Section-by-Section Critique</h3>
+                    <p className="text-xs text-neutral-300 leading-relaxed">
+                      We annotated your resume exactly like a recruiter. See which bullet points are generic, which skills you must scrap, and read the brutal section-by-section breakdown.
+                    </p>
+                  </div>
+
+                  <div className="flex-shrink-0 w-full md:w-auto">
+                    <span className="inline-flex items-center justify-center gap-1.5 px-5 py-3 text-xs font-black uppercase tracking-wider text-neutral-900 bg-white hover:bg-neutral-100 rounded-medium shadow-sm transition-all group-hover:translate-x-1.5">
+                      View Roast Receipts →
+                    </span>
+                  </div>
+                </motion.div>
+              </div>
+
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1712,13 +1728,12 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       {idx > 0 && <span className="text-neutral-300 text-xs font-bold select-none">→</span>}
                       <button
                         onClick={() => handleProgressClick(section)}
-                        className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-250 py-1 px-3 rounded-full cursor-pointer whitespace-nowrap focus:outline-none ${
-                          isActive 
-                            ? 'bg-neutral-900 text-white shadow-sm scale-105' 
-                            : isPast 
-                              ? 'text-primary hover:text-accent' 
-                              : 'text-secondary hover:text-primary'
-                        }`}
+                        className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-250 py-1 px-3 rounded-full cursor-pointer whitespace-nowrap focus:outline-none ${isActive
+                          ? 'bg-neutral-900 text-white shadow-sm scale-105'
+                          : isPast
+                            ? 'text-primary hover:text-accent'
+                            : 'text-secondary hover:text-primary'
+                          }`}
                       >
                         {section}
                       </button>
@@ -1732,7 +1747,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
             <div className="relative border-l border-dashed border-neutral-300 ml-6 pl-10 space-y-8 py-2">
               {sectionsList.map((section, idx) => {
                 const isActive = activeSection === section;
-                
+
                 // Get matching icon, title, badge, and content for each section
                 let icon = <Eye className="w-4.5 h-4.5" />;
                 let title = "";
@@ -1744,7 +1759,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                   icon = <Eye className="w-4.5 h-4.5" />;
                   title = "Summary & Pitch";
                   badge = renderReactionBadge(severity);
-                  
+
                   content = (
                     <div className="space-y-4">
                       <div className="space-y-1.5">
@@ -1754,11 +1769,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                         </div>
                       </div>
 
-                      <div className={`p-4 rounded-medium border flex gap-3 ${
-                        severity === 'SEVERE' ? 'bg-error/5 border-error/15' :
+                      <div className={`p-4 rounded-medium border flex gap-3 ${severity === 'SEVERE' ? 'bg-error/5 border-error/15' :
                         severity === 'MODERATE' ? 'bg-amber-50/70 border-amber-900/10' :
-                        'bg-emerald-50/70 border-emerald-950/10'
-                      }`}>
+                          'bg-emerald-50/70 border-emerald-950/10'
+                        }`}>
                         <span className="text-base flex-shrink-0">
                           {severity === 'SEVERE' ? '🔥' : severity === 'MODERATE' ? '⚠️' : '🟢'}
                         </span>
@@ -1785,20 +1799,19 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       )}
                     </div>
                   );
-                } 
+                }
                 else if (section === 'Skills') {
                   const severity = getSkillsSeverity();
                   icon = <Cpu className="w-4.5 h-4.5" />;
                   title = "Skills & Utility";
                   badge = renderReactionBadge(severity);
-                  
+
                   content = (
                     <div className="space-y-5">
-                      <div className={`p-4 rounded-medium border flex gap-3 ${
-                        severity === 'SEVERE' ? 'bg-error/5 border-error/15' :
+                      <div className={`p-4 rounded-medium border flex gap-3 ${severity === 'SEVERE' ? 'bg-error/5 border-error/15' :
                         severity === 'MODERATE' ? 'bg-amber-50/70 border-amber-900/10' :
-                        'bg-emerald-50/70 border-emerald-950/10'
-                      }`}>
+                          'bg-emerald-50/70 border-emerald-950/10'
+                        }`}>
                         <span className="text-base flex-shrink-0">
                           {severity === 'SEVERE' ? '🔥' : severity === 'MODERATE' ? '⚠️' : '🟢'}
                         </span>
@@ -1857,20 +1870,19 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       </div>
                     </div>
                   );
-                } 
+                }
                 else if (section === 'Projects') {
                   const severity = getProjectsSeverity();
                   icon = <FolderGit2 className="w-4.5 h-4.5" />;
                   title = "Projects & Proof of Work";
                   badge = renderReactionBadge(severity);
-                  
+
                   content = (
                     <div className="space-y-6">
-                      <div className={`p-4 rounded-medium border flex gap-3 ${
-                        severity === 'SEVERE' ? 'bg-error/5 border-error/15' :
+                      <div className={`p-4 rounded-medium border flex gap-3 ${severity === 'SEVERE' ? 'bg-error/5 border-error/15' :
                         severity === 'MODERATE' ? 'bg-amber-50/70 border-amber-900/10' :
-                        'bg-emerald-50/70 border-emerald-950/10'
-                      }`}>
+                          'bg-emerald-50/70 border-emerald-950/10'
+                        }`}>
                         <span className="text-base flex-shrink-0">
                           {severity === 'SEVERE' ? '🔥' : severity === 'MODERATE' ? '⚠️' : '🟢'}
                         </span>
@@ -1892,11 +1904,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                             <div key={pIdx} className="border border-neutral-200 rounded-medium bg-white overflow-hidden text-left">
                               <div className="bg-neutral-50 px-4 py-2.5 border-b border-neutral-200 flex justify-between items-center">
                                 <span className="text-xs font-bold text-primary">Project #{pIdx + 1}</span>
-                                <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
-                                  projectItemSeverity === 'SEVERE' ? 'bg-error/10 text-error' :
+                                <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${projectItemSeverity === 'SEVERE' ? 'bg-error/10 text-error' :
                                   projectItemSeverity === 'MODERATE' ? 'bg-warning/10 text-warning' :
-                                  'bg-success/15 text-success'
-                                }`}>
+                                    'bg-success/15 text-success'
+                                  }`}>
                                   {projectItemSeverity}
                                 </span>
                               </div>
@@ -1910,43 +1921,37 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                                 <div className="space-y-1.5">
                                   <span className="text-[9px] font-bold text-secondary uppercase tracking-wider block">Diagnostics Checklist</span>
                                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                                    <div className={`flex items-center gap-1.5 p-1.5 rounded border text-[10px] font-semibold ${
-                                      diag.hasMetrics ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-100 text-amber-900'
-                                    }`}>
+                                    <div className={`flex items-center gap-1.5 p-1.5 rounded border text-[10px] font-semibold ${diag.hasMetrics ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-100 text-amber-900'
+                                      }`}>
                                       <span>{diag.hasMetrics ? '✅' : '❌'}</span>
                                       <span>Metrics</span>
                                     </div>
-                                    <div className={`flex items-center gap-1.5 p-1.5 rounded border text-[10px] font-semibold ${
-                                      diag.hasImpact ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-100 text-amber-900'
-                                    }`}>
+                                    <div className={`flex items-center gap-1.5 p-1.5 rounded border text-[10px] font-semibold ${diag.hasImpact ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-100 text-amber-900'
+                                      }`}>
                                       <span>{diag.hasImpact ? '✅' : '❌'}</span>
                                       <span>Impact</span>
                                     </div>
-                                    <div className={`flex items-center gap-1.5 p-1.5 rounded border text-[10px] font-semibold ${
-                                      diag.hasTechDecisions ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-100 text-amber-900'
-                                    }`}>
+                                    <div className={`flex items-center gap-1.5 p-1.5 rounded border text-[10px] font-semibold ${diag.hasTechDecisions ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-100 text-amber-900'
+                                      }`}>
                                       <span>{diag.hasTechDecisions ? '✅' : '❌'}</span>
                                       <span>Tech decisions</span>
                                     </div>
-                                    <div className={`flex items-center gap-1.5 p-1.5 rounded border text-[10px] font-semibold ${
-                                      diag.hasUsers ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-100 text-amber-900'
-                                    }`}>
+                                    <div className={`flex items-center gap-1.5 p-1.5 rounded border text-[10px] font-semibold ${diag.hasUsers ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-100 text-amber-900'
+                                      }`}>
                                       <span>{diag.hasUsers ? '✅' : '❌'}</span>
                                       <span>Users / Scale</span>
                                     </div>
                                   </div>
                                 </div>
 
-                                <div className={`border p-3 rounded text-left ${
-                                  projectItemSeverity === 'SEVERE' ? 'bg-error/5 border-error/10' :
+                                <div className={`border p-3 rounded text-left ${projectItemSeverity === 'SEVERE' ? 'bg-error/5 border-error/10' :
                                   projectItemSeverity === 'MODERATE' ? 'bg-accent/5 border-accent/15' :
-                                  'bg-success/5 border-success/15'
-                                }`}>
-                                  <span className={`text-[9px] font-bold uppercase tracking-wider block mb-1 ${
-                                    projectItemSeverity === 'SEVERE' ? 'text-error' :
-                                    projectItemSeverity === 'MODERATE' ? 'text-accent' :
-                                    'text-success'
+                                    'bg-success/5 border-success/15'
                                   }`}>
+                                  <span className={`text-[9px] font-bold uppercase tracking-wider block mb-1 ${projectItemSeverity === 'SEVERE' ? 'text-error' :
+                                    projectItemSeverity === 'MODERATE' ? 'text-accent' :
+                                      'text-success'
+                                    }`}>
                                     {projectItemSeverity} CRITIQUE
                                   </span>
                                   <p className="font-heading font-bold italic text-base sm:text-lg text-primary leading-relaxed">
@@ -1965,20 +1970,19 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       </div>
                     </div>
                   );
-                } 
+                }
                 else if (section === 'Experience') {
                   const severity = getExperienceSeverity();
                   icon = <Briefcase className="w-4.5 h-4.5" />;
                   title = "Experience & Impact";
                   badge = renderReactionBadge(severity);
-                  
+
                   content = (
                     <div className="space-y-6">
-                      <div className={`p-4 rounded-medium border flex gap-3 ${
-                        severity === 'SEVERE' ? 'bg-error/5 border-error/15' :
+                      <div className={`p-4 rounded-medium border flex gap-3 ${severity === 'SEVERE' ? 'bg-error/5 border-error/15' :
                         severity === 'MODERATE' ? 'bg-amber-50/70 border-amber-900/10' :
-                        'bg-emerald-50/70 border-emerald-950/10'
-                      }`}>
+                          'bg-emerald-50/70 border-emerald-950/10'
+                        }`}>
                         <span className="text-base flex-shrink-0">
                           {severity === 'SEVERE' ? '🔥' : severity === 'MODERATE' ? '⚠️' : '🟢'}
                         </span>
@@ -2003,11 +2007,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                                   <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider ${tag.bg}`}>
                                     {tag.label}
                                   </span>
-                                  <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
-                                    expItemSeverity === 'SEVERE' ? 'bg-error/10 text-error' :
+                                  <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${expItemSeverity === 'SEVERE' ? 'bg-error/10 text-error' :
                                     expItemSeverity === 'MODERATE' ? 'bg-warning/10 text-warning' :
-                                    'bg-success/15 text-success'
-                                  }`}>
+                                      'bg-success/15 text-success'
+                                    }`}>
                                     {expItemSeverity}
                                   </span>
                                 </div>
@@ -2023,16 +2026,14 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                                   </div>
                                   <div className="space-y-1">
                                     <span className="text-[9px] font-bold text-secondary uppercase tracking-wider block">Recruiter Critique</span>
-                                    <div className={`p-3 border rounded ${
-                                      expItemSeverity === 'SEVERE' ? 'bg-error/5 border-error/10' :
+                                    <div className={`p-3 border rounded ${expItemSeverity === 'SEVERE' ? 'bg-error/5 border-error/10' :
                                       expItemSeverity === 'MODERATE' ? 'bg-accent/5 border-accent/15' :
-                                      'bg-success/5 border-success/15'
-                                    }`}>
-                                      <span className={`text-[9px] font-bold uppercase block mb-1 ${
-                                        expItemSeverity === 'SEVERE' ? 'text-error' :
-                                        expItemSeverity === 'MODERATE' ? 'text-accent' :
-                                        'text-success'
+                                        'bg-success/5 border-success/15'
                                       }`}>
+                                      <span className={`text-[9px] font-bold uppercase block mb-1 ${expItemSeverity === 'SEVERE' ? 'text-error' :
+                                        expItemSeverity === 'MODERATE' ? 'text-accent' :
+                                          'text-success'
+                                        }`}>
                                         {expItemSeverity} OBSERVATION:
                                       </span>
                                       <p className="font-heading font-bold italic text-base sm:text-lg text-primary leading-relaxed">
@@ -2053,13 +2054,13 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       </div>
                     </div>
                   );
-                } 
+                }
                 else if (section === 'Achievements') {
                   const severity = getAchievementsSeverity();
                   icon = <Award className="w-4.5 h-4.5" />;
                   title = "Achievements & Accolades";
                   badge = renderReactionBadge(severity);
-                  
+
                   content = (
                     <div className="space-y-4">
                       {severity === 'PRAISE' ? (
@@ -2109,28 +2110,27 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                       </div>
                     </div>
                   );
-                } 
+                }
                 else if (section === 'Verdict') {
                   const severity = getVerdictSeverity();
                   icon = <CheckCircle2 className="w-4.5 h-4.5" />;
                   title = "Recruiter's Final Verdict";
                   badge = renderReactionBadge(severity);
-                  
+
                   content = (
                     <div className="space-y-6">
                       <div className="p-5 rounded-medium border border-neutral-900 bg-white shadow-subtle space-y-3">
                         <div className="flex justify-between items-center">
                           <h4 className="text-sm font-bold text-primary uppercase tracking-wide">Recruiter Assessment</h4>
-                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
-                            severity === 'SEVERE' ? 'bg-error/10 text-error border border-error/20' :
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${severity === 'SEVERE' ? 'bg-error/10 text-error border border-error/20' :
                             severity === 'MODERATE' ? 'bg-warning/10 text-warning border border-warning/20' :
-                            'bg-success/15 text-success border border-success/20'
-                          }`}>
+                              'bg-success/15 text-success border border-success/20'
+                            }`}>
                             {severity} RECOMMENDATION
                           </span>
                         </div>
                         <p className="font-heading font-bold italic text-lg sm:text-xl text-primary leading-relaxed">
-                          {data.score >= 85 
+                          {data.score >= 85
                             ? "Excellent structure and strong credentials. With minor tweaks to wording, you are ready to apply."
                             : data.score >= 70
                               ? "Reasonable base, but key impact indicators are missing. Fix the flagged items before submitting."
@@ -2151,12 +2151,12 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                           <div className="relative w-16 h-16 rounded-full border-4 border-neutral-200 flex items-center justify-center font-black text-xl text-primary bg-neutral-50 shadow-inner">
                             {data.score}
                             <svg className="absolute -inset-[4px] w-[72px] h-[72px] transform -rotate-90">
-                              <circle 
-                                cx="36" 
-                                cy="36" 
-                                r="32" 
-                                className="stroke-accent fill-transparent" 
-                                strokeWidth="4" 
+                              <circle
+                                cx="36"
+                                cy="36"
+                                r="32"
+                                className="stroke-accent fill-transparent"
+                                strokeWidth="4"
                                 strokeDasharray={2 * Math.PI * 32}
                                 strokeDashoffset={2 * Math.PI * 32 * (1 - data.score / 100)}
                               />
@@ -2179,16 +2179,14 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                               </div>
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
-                                  <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
-                                    fix.action === 'REMOVE' ? 'bg-error/10 text-error' :
+                                  <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${fix.action === 'REMOVE' ? 'bg-error/10 text-error' :
                                     fix.action === 'ADD' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
-                                  }`}>
+                                    }`}>
                                     {fix.action}
                                   </span>
-                                  <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${
-                                    fix.impact === 'HIGH' ? 'bg-error text-white' :
+                                  <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${fix.impact === 'HIGH' ? 'bg-error text-white' :
                                     fix.impact === 'MEDIUM' ? 'bg-warning text-white' : 'bg-secondary text-white'
-                                  }`}>
+                                    }`}>
                                     {fix.impact} IMPACT
                                   </span>
                                 </div>
@@ -2219,32 +2217,29 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                     {/* Absolute positioned numbered timeline dot */}
                     <button
                       onClick={() => handleProgressClick(section)}
-                      className={`absolute -left-[52px] top-6 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 z-10 text-[10px] font-bold cursor-pointer focus:outline-none ${
-                        isActive 
-                          ? 'border-accent bg-accent text-white scale-110 shadow-sm' 
-                          : 'border-neutral-300 bg-white text-secondary hover:border-neutral-500 hover:text-primary'
-                      }`}
+                      className={`absolute -left-[52px] top-6 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 z-10 text-[10px] font-bold cursor-pointer focus:outline-none ${isActive
+                        ? 'border-accent bg-accent text-white scale-110 shadow-sm'
+                        : 'border-neutral-300 bg-white text-secondary hover:border-neutral-500 hover:text-primary'
+                        }`}
                     >
                       {idx + 1}
                     </button>
 
                     {/* The Card Element */}
-                    <div 
+                    <div
                       id={`section-${section.toLowerCase()}`}
-                      className={`bg-white rounded-large border transition-all duration-300 shadow-subtle overflow-hidden text-left ${
-                        isActive 
-                          ? 'border-neutral-900 ring-1 ring-neutral-900/10' 
-                          : 'border-neutral-200 hover:border-neutral-300'
-                      }`}
+                      className={`bg-white rounded-large border transition-all duration-300 shadow-subtle overflow-hidden text-left ${isActive
+                        ? 'border-neutral-900 ring-1 ring-neutral-900/10'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                        }`}
                     >
                       <button
                         onClick={() => toggleActiveSection(section)}
                         className="w-full flex justify-between items-center p-6 text-left hover:bg-neutral-50/50 transition-colors focus:outline-none"
                       >
                         <div className="flex items-center gap-4">
-                          <div className={`p-2.5 rounded-medium border transition-colors ${
-                            isActive ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-neutral-50 border-neutral-200 text-secondary'
-                          }`}>
+                          <div className={`p-2.5 rounded-medium border transition-colors ${isActive ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-neutral-50 border-neutral-200 text-secondary'
+                            }`}>
                             {icon}
                           </div>
                           <div>
@@ -2295,7 +2290,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
             className="w-full"
           >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12 items-start">
-              
+
               {/* Column 1: Debate the Recruiter (5 cols) */}
               <div className="lg:col-span-5 bg-white p-8 rounded-large border border-neutral-900 shadow-subtle flex flex-col gap-6">
                 <div className="space-y-1 text-left">
@@ -2310,208 +2305,207 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
 
                 {/* Chat message display area */}
                 <div className="border border-neutral-900 rounded-medium bg-neutral-50/50 p-4 h-[500px] overflow-y-auto flex flex-col gap-4 relative">
-          {chatMessages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-6 text-secondary space-y-2">
-              <span className="text-2xl">💬</span>
-              <p className="text-xs font-bold">Conversation started.</p>
-              <p className="text-[11px] max-w-sm">Ask a question below or choose a quick prompt to begin your debate.</p>
-            </div>
-          ) : (
-            chatMessages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'self-end flex-row-reverse' : 'self-start'}`}
-              >
-                {msg.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-full bg-neutral-900 border border-neutral-900 flex items-center justify-center font-bold text-[10px] text-white flex-shrink-0">
-                    ✍️
-                  </div>
-                )}
-                <div
-                  className={`p-3.5 rounded-medium border text-xs leading-relaxed shadow-subtle ${
-                    msg.role === 'user'
-                      ? 'bg-white border-neutral-900 text-primary rounded-tr-none'
-                      : 'bg-neutral-950 border-neutral-950 text-white rounded-tl-none font-medium'
-                  }`}
-                >
-                  {msg.content}
-                </div>
-              </div>
-            ))
-          )}
-
-          {/* Typing/Loading indicator */}
-          {isLoadingChat && (
-            <div className="flex gap-3 self-start items-center max-w-[85%]">
-              <div className="w-7 h-7 rounded-full bg-neutral-900 flex items-center justify-center font-bold text-[10px] text-white flex-shrink-0 animate-spin">
-                ⏳
-              </div>
-              <div className="p-3 bg-neutral-900/10 border border-dashed border-neutral-300 text-secondary text-[11px] rounded-medium rounded-tl-none animate-pulse">
-                {typingMessage}
-              </div>
-            </div>
-          )}
-
-          <div ref={chatEndRef} />
-        </div>
-
-        {/* Quick Prompts */}
-        <div className="flex flex-wrap gap-2">
-          {presetQuestions.map((q, idx) => (
-            <button
-              key={idx}
-              disabled={isLoadingChat}
-              onClick={() => handleSendPreset(q)}
-              className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-neutral-200 hover:border-neutral-900 bg-white text-secondary hover:text-primary transition-all disabled:opacity-50 cursor-pointer"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-
-        {/* Input Bar */}
-        <form onSubmit={handleSendMessage} className="flex gap-3">
-          <input
-            type="text"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Type your defense here (e.g., 'But I built the whole frontend in React from scratch!')"
-            disabled={isLoadingChat}
-            className="flex-grow p-3 bg-white border border-neutral-900 rounded-medium text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 placeholder:text-neutral-400"
-          />
-          <button
-            type="submit"
-            disabled={isLoadingChat || !chatInput.trim()}
-            className="px-6 bg-primary hover:bg-primary/95 text-white font-bold text-xs rounded-medium transition-all shadow-subtle border border-primary flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
-          >
-            Send
-          </button>
-        </form>
-      </div>
-
-      {/* Column 2: Rehabilitation Workshop (7 cols) */}
-      <div ref={fixWorkshopRef} className="lg:col-span-7 space-y-6">
-        
-        {/* Rehabilitation Header */}
-        <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-success/30 bg-success/10 shadow-subtle mb-4">
-            <Sparkles className="w-3.5 h-3.5 text-success" />
-            <span className="text-xs font-semibold text-success uppercase">Rehabilitation Enabled</span>
-          </div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-primary mb-2 font-heading">
-            Resume Rehabilitation
-          </h2>
-          <p className="text-xs text-secondary">
-            We've converted your summary text and critical bullets into result-driven value propositions.
-          </p>
-        </div>
-
-            {/* Summary Rewrite Section */}
-            <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle mb-6 space-y-6">
-              <h3 className="text-base font-bold text-primary flex items-center gap-2">
-                <span className="w-2.5 h-4 bg-success" />
-                Summary Upgrade
-              </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-11 gap-4 items-center">
-                <div className="lg:col-span-5 border border-error bg-error/5 rounded-medium p-5 flex flex-col justify-between min-h-[140px]">
-                  <div>
-                    <span className="text-[9px] font-bold text-error uppercase bg-error/10 border border-error/20 px-2 py-0.5 rounded tracking-wider">Original</span>
-                    <p className="text-xs text-secondary mt-3 leading-relaxed italic">
-                      "{data.improvedSummary.original}"
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Arrow column */}
-                <div className="lg:col-span-1 flex items-center justify-center">
-                  <ArrowRight className="w-6 h-6 text-secondary rotate-90 lg:rotate-0" />
-                </div>
-
-                <div className="lg:col-span-5 border border-success bg-success/5 rounded-medium p-5 flex flex-col justify-between min-h-[140px]">
-                  <div>
-                    <span className="text-[9px] font-bold text-success uppercase bg-success/10 border border-success/20 px-2 py-0.5 rounded tracking-wider">Improved</span>
-                    <p className="text-xs text-primary font-bold mt-3 leading-relaxed">
-                      "{data.improvedSummary.improved}"
-                    </p>
-                  </div>
-                  <div className="text-[10px] text-secondary mt-3 pt-2 border-t border-success/10">
-                    <span className="font-extrabold text-success">Why this wins:</span> {data.improvedSummary.explanation}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Bullet point rewrites */}
-            <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle mb-6 space-y-6">
-              <h3 className="text-base font-bold text-primary flex items-center gap-2">
-                <span className="w-2.5 h-4 bg-success" />
-                Bullet Upgrade List
-              </h3>
-              <div className="space-y-6">
-                {[...data.experience.items, ...data.projects.items].map((item, idx) => (
-                  <div key={idx} className="border border-neutral-900 rounded-medium overflow-hidden">
-                    <div className="grid grid-cols-1 lg:grid-cols-11 items-center bg-white">
-                      
-                      <div className="lg:col-span-5 p-5 bg-error/5 min-h-[120px] flex flex-col justify-center">
-                        <span className="text-[9px] font-bold text-error uppercase bg-error/10 border border-error/20 px-1.5 py-0.5 rounded tracking-wider self-start">Original</span>
-                        <p className="text-xs text-secondary mt-2.5 leading-relaxed">
-                          "{item.original}"
-                        </p>
-                      </div>
-
-                      <div className="lg:col-span-1 flex items-center justify-center p-3 border-y lg:border-y-0 border-neutral-200">
-                        <ArrowRight className="w-5 h-5 text-secondary rotate-90 lg:rotate-0" />
-                      </div>
-
-                      <div className="lg:col-span-5 p-5 bg-success/5 min-h-[120px] flex flex-col justify-center">
-                        <span className="text-[9px] font-bold text-success uppercase bg-success/10 border border-success/20 px-1.5 py-0.5 rounded tracking-wider self-start">Rewrite</span>
-                        <p className="text-xs text-primary font-bold mt-2.5 leading-relaxed">
-                          "{item.improved}"
-                        </p>
-                      </div>
-
+                  {chatMessages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-6 text-secondary space-y-2">
+                      <span className="text-2xl">💬</span>
+                      <p className="text-xs font-bold">Conversation started.</p>
+                      <p className="text-[11px] max-w-sm">Ask a question below or choose a quick prompt to begin your debate.</p>
                     </div>
-                    <div className="p-4 bg-neutral-50 border-t border-neutral-200 text-xs text-secondary flex items-start gap-2 leading-relaxed">
-                      <CornerDownRight className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+                  ) : (
+                    chatMessages.map((msg, index) => (
+                      <div
+                        key={index}
+                        className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'self-end flex-row-reverse' : 'self-start'}`}
+                      >
+                        {msg.role === 'assistant' && (
+                          <div className="w-7 h-7 rounded-full bg-neutral-900 border border-neutral-900 flex items-center justify-center font-bold text-[10px] text-white flex-shrink-0">
+                            ✍️
+                          </div>
+                        )}
+                        <div
+                          className={`p-3.5 rounded-medium border text-xs leading-relaxed shadow-subtle ${msg.role === 'user'
+                            ? 'bg-white border-neutral-900 text-primary rounded-tr-none'
+                            : 'bg-neutral-950 border-neutral-950 text-white rounded-tl-none font-medium'
+                            }`}
+                        >
+                          {msg.content}
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {/* Typing/Loading indicator */}
+                  {isLoadingChat && (
+                    <div className="flex gap-3 self-start items-center max-w-[85%]">
+                      <div className="w-7 h-7 rounded-full bg-neutral-900 flex items-center justify-center font-bold text-[10px] text-white flex-shrink-0 animate-spin">
+                        ⏳
+                      </div>
+                      <div className="p-3 bg-neutral-900/10 border border-dashed border-neutral-300 text-secondary text-[11px] rounded-medium rounded-tl-none animate-pulse">
+                        {typingMessage}
+                      </div>
+                    </div>
+                  )}
+
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Quick Prompts */}
+                <div className="flex flex-wrap gap-2">
+                  {presetQuestions.map((q, idx) => (
+                    <button
+                      key={idx}
+                      disabled={isLoadingChat}
+                      onClick={() => handleSendPreset(q)}
+                      className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-neutral-200 hover:border-neutral-900 bg-white text-secondary hover:text-primary transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Input Bar */}
+                <form onSubmit={handleSendMessage} className="flex gap-3">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Type your defense here (e.g., 'But I built the whole frontend in React from scratch!')"
+                    disabled={isLoadingChat}
+                    className="flex-grow p-3 bg-white border border-neutral-900 rounded-medium text-xs text-primary focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 placeholder:text-neutral-400"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoadingChat || !chatInput.trim()}
+                    className="px-6 bg-primary hover:bg-primary/95 text-white font-bold text-xs rounded-medium transition-all shadow-subtle border border-primary flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
+
+              {/* Column 2: Rehabilitation Workshop (7 cols) */}
+              <div ref={fixWorkshopRef} className="lg:col-span-7 space-y-6">
+
+                {/* Rehabilitation Header */}
+                <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle text-left">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-success/30 bg-success/10 shadow-subtle mb-4">
+                    <Sparkles className="w-3.5 h-3.5 text-success" />
+                    <span className="text-xs font-semibold text-success uppercase">Rehabilitation Enabled</span>
+                  </div>
+                  <h2 className="text-2xl font-extrabold tracking-tight text-primary mb-2 font-heading">
+                    Resume Rehabilitation
+                  </h2>
+                  <p className="text-xs text-secondary">
+                    We've converted your summary text and critical bullets into result-driven value propositions.
+                  </p>
+                </div>
+
+                {/* Summary Rewrite Section */}
+                <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle mb-6 space-y-6">
+                  <h3 className="text-base font-bold text-primary flex items-center gap-2">
+                    <span className="w-2.5 h-4 bg-success" />
+                    Summary Upgrade
+                  </h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-11 gap-4 items-center">
+                    <div className="lg:col-span-5 border border-error bg-error/5 rounded-medium p-5 flex flex-col justify-between min-h-[140px]">
                       <div>
-                        <span className="font-extrabold text-primary">Why this wins:</span> {item.explanation}
+                        <span className="text-[9px] font-bold text-error uppercase bg-error/10 border border-error/20 px-2 py-0.5 rounded tracking-wider">Original</span>
+                        <p className="text-xs text-secondary mt-3 leading-relaxed italic">
+                          "{data.improvedSummary.original}"
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Arrow column */}
+                    <div className="lg:col-span-1 flex items-center justify-center">
+                      <ArrowRight className="w-6 h-6 text-secondary rotate-90 lg:rotate-0" />
+                    </div>
+
+                    <div className="lg:col-span-5 border border-success bg-success/5 rounded-medium p-5 flex flex-col justify-between min-h-[140px]">
+                      <div>
+                        <span className="text-[9px] font-bold text-success uppercase bg-success/10 border border-success/20 px-2 py-0.5 rounded tracking-wider">Improved</span>
+                        <p className="text-xs text-primary font-bold mt-3 leading-relaxed">
+                          "{data.improvedSummary.improved}"
+                        </p>
+                      </div>
+                      <div className="text-[10px] text-secondary mt-3 pt-2 border-t border-success/10">
+                        <span className="font-extrabold text-success">Why this wins:</span> {data.improvedSummary.explanation}
                       </div>
                     </div>
                   </div>
-                ))}
+                </div>
+
+                {/* Bullet point rewrites */}
+                <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle mb-6 space-y-6">
+                  <h3 className="text-base font-bold text-primary flex items-center gap-2">
+                    <span className="w-2.5 h-4 bg-success" />
+                    Bullet Upgrade List
+                  </h3>
+                  <div className="space-y-6">
+                    {[...data.experience.items, ...data.projects.items].map((item, idx) => (
+                      <div key={idx} className="border border-neutral-900 rounded-medium overflow-hidden">
+                        <div className="grid grid-cols-1 lg:grid-cols-11 items-center bg-white">
+
+                          <div className="lg:col-span-5 p-5 bg-error/5 min-h-[120px] flex flex-col justify-center">
+                            <span className="text-[9px] font-bold text-error uppercase bg-error/10 border border-error/20 px-1.5 py-0.5 rounded tracking-wider self-start">Original</span>
+                            <p className="text-xs text-secondary mt-2.5 leading-relaxed">
+                              "{item.original}"
+                            </p>
+                          </div>
+
+                          <div className="lg:col-span-1 flex items-center justify-center p-3 border-y lg:border-y-0 border-neutral-200">
+                            <ArrowRight className="w-5 h-5 text-secondary rotate-90 lg:rotate-0" />
+                          </div>
+
+                          <div className="lg:col-span-5 p-5 bg-success/5 min-h-[120px] flex flex-col justify-center">
+                            <span className="text-[9px] font-bold text-success uppercase bg-success/10 border border-success/20 px-1.5 py-0.5 rounded tracking-wider self-start">Rewrite</span>
+                            <p className="text-xs text-primary font-bold mt-2.5 leading-relaxed">
+                              "{item.improved}"
+                            </p>
+                          </div>
+
+                        </div>
+                        <div className="p-4 bg-neutral-50 border-t border-neutral-200 text-xs text-secondary flex items-start gap-2 leading-relaxed">
+                          <CornerDownRight className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="font-extrabold text-primary">Why this wins:</span> {item.explanation}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Layout directives */}
+                <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle mb-12 space-y-4">
+                  <h3 className="text-base font-bold text-primary flex items-center gap-2">
+                    <span className="w-2.5 h-4 bg-success" />
+                    Formatting Directives
+                  </h3>
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
+                    <li className="flex items-start gap-2.5 text-xs sm:text-sm text-secondary">
+                      <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                      <span>Stick to a single-column layout. Two columns look nice but break older ATS readers completely.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs sm:text-sm text-secondary">
+                      <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                      <span>Use standard font types (Inter, Arial, Georgia, Calibri). Custom geometric fonts sometimes render as garbage text in scanners.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs sm:text-sm text-secondary">
+                      <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                      <span>Use simple headers: 'Work Experience', 'Projects', 'Skills', 'Education'. Avoid creative section names like 'Professional Stacks'.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5 text-xs sm:text-sm text-secondary">
+                      <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                      <span>Ensure your contact info is actual text and not embedded in an image.</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
-
-            {/* Layout directives */}
-            <div className="bg-white p-8 rounded-large border border-neutral-900 shadow-subtle mb-12 space-y-4">
-              <h3 className="text-base font-bold text-primary flex items-center gap-2">
-                <span className="w-2.5 h-4 bg-success" />
-                Formatting Directives
-              </h3>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
-                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-secondary">
-                  <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                  <span>Stick to a single-column layout. Two columns look nice but break older ATS readers completely.</span>
-                </li>
-                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-secondary">
-                  <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                  <span>Use standard font types (Inter, Arial, Georgia, Calibri). Custom geometric fonts sometimes render as garbage text in scanners.</span>
-                </li>
-                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-secondary">
-                  <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                  <span>Use simple headers: 'Work Experience', 'Projects', 'Skills', 'Education'. Avoid creative section names like 'Professional Stacks'.</span>
-                </li>
-                <li className="flex items-start gap-2.5 text-xs sm:text-sm text-secondary">
-                  <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                  <span>Ensure your contact info is actual text and not embedded in an image.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-      )}
-    </AnimatePresence>
-  </div>
-);
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 };

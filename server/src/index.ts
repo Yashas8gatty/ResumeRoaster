@@ -178,40 +178,103 @@ function generateHeuristicRoast(resumeText: string): RoastResponse {
     foundSkills.push('Software Development', 'Git', 'Microsoft Word');
   }
 
-  // 2. Extract potential bullets/experiences
+  // 2. Extract potential sections sequentially to group bullets by project/experience title
+  const projectsList: Array<{ title: string; bullets: string[] }> = [];
+  const experienceList: Array<{ title: string; bullets: string[] }> = [];
+  let currentSection = 'summary';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lower = line.toLowerCase();
+    
+    if (lower.includes('experience') || lower.includes('work history') || lower.includes('employment') || lower.includes('professional background')) {
+      currentSection = 'experience';
+      continue;
+    } else if (lower.includes('project')) {
+      currentSection = 'projects';
+      continue;
+    } else if (lower.includes('skill') || lower.includes('technologies') || lower.includes('expertise') || lower.includes('technical skills')) {
+      currentSection = 'skills';
+      continue;
+    } else if (lower.includes('education') || lower.includes('academic')) {
+      currentSection = 'education';
+      continue;
+    }
+    
+    const isBullet = /^[•\-\*\▪\+o]\s*/.test(line);
+    const cleanLine = line.replace(/^[•\-\*\▪\+o]\s*/, '').trim();
+    
+    if (currentSection === 'projects') {
+      if (isBullet) {
+        if (projectsList.length > 0) {
+          projectsList[projectsList.length - 1].bullets.push(cleanLine);
+        } else {
+          projectsList.push({ title: 'Personal Project', bullets: [cleanLine] });
+        }
+      } else {
+        if (line.length < 90) {
+          projectsList.push({ title: line, bullets: [] });
+        }
+      }
+    } else if (currentSection === 'experience') {
+      if (isBullet) {
+        if (experienceList.length > 0) {
+          experienceList[experienceList.length - 1].bullets.push(cleanLine);
+        } else {
+          experienceList.push({ title: 'Professional Role', bullets: [cleanLine] });
+        }
+      } else {
+        if (line.length < 90) {
+          experienceList.push({ title: line, bullets: [] });
+        }
+      }
+    }
+  }
+
+  // Filter out any titles that ended up with no bullets
+  const validProjects = projectsList.filter(p => p.bullets.length > 0);
+  const validExperiences = experienceList.filter(e => e.bullets.length > 0);
+
+  // Keyword-based fallback if the structure is simple or parsed incorrectly
   const bullets = lines.filter(line => {
     return /^[•\-\*\▪\+o]\s*/.test(line) || (line.length > 40 && line.length < 180 && !line.includes(':'));
   }).map(line => line.replace(/^[•\-\*\▪\+o]\s*/, ''));
 
-  const expBullets: string[] = [];
-  const projBullets: string[] = [];
+  const fallbackExp: string[] = [];
+  const fallbackProj: string[] = [];
   
   bullets.forEach(b => {
     const lower = b.toLowerCase();
     if (lower.includes('project') || lower.includes('app') || lower.includes('system') || lower.includes('api') || lower.includes('clone') || lower.includes('build')) {
-      projBullets.push(b);
+      fallbackProj.push(b);
     } else if (lower.includes('work') || lower.includes('led') || lower.includes('manage') || lower.includes('collaborate') || lower.includes('respons') || lower.includes('develop')) {
-      expBullets.push(b);
+      fallbackExp.push(b);
     } else {
-      if (expBullets.length <= projBullets.length) {
-        expBullets.push(b);
+      if (fallbackExp.length <= fallbackProj.length) {
+        fallbackExp.push(b);
       } else {
-        projBullets.push(b);
+        fallbackProj.push(b);
       }
     }
   });
 
+  const finalExp = validExperiences.length > 0 
+    ? validExperiences.slice(0, 8) 
+    : (fallbackExp.length > 0 ? fallbackExp.slice(0, 8).map(b => ({ title: 'Work Experience Bullet', bullets: [b] })) : null);
+
+  const finalProj = validProjects.length > 0 
+    ? validProjects.slice(0, 8) 
+    : (fallbackProj.length > 0 ? fallbackProj.slice(0, 8).map(b => ({ title: 'Project Bullet', bullets: [b] })) : null);
+
   const defaultExp = [
-    "Responsible for writing clean code and testing frontend features.",
-    "Worked with cross-functional teams to deliver software updates."
+    { title: "Software Engineering Duties", bullets: ["Responsible for writing clean code and testing frontend features.", "Worked with cross-functional teams to deliver software updates."] }
   ];
   const defaultProj = [
-    "Built a task manager application in React and Redux.",
-    "Developed a personal portfolio site to show coding projects."
+    { title: "React Task Manager", bullets: ["Built a task manager application in React and Redux.", "Developed a personal portfolio site to show coding projects."] }
   ];
 
-  const finalExp = expBullets.length > 0 ? expBullets.slice(0, 8) : defaultExp;
-  const finalProj = projBullets.length > 0 ? projBullets.slice(0, 8) : defaultProj;
+  const displayExp = finalExp || defaultExp;
+  const displayProj = finalProj || defaultProj;
 
   let originalSummary = "Passionate developer seeking opportunities to learn and grow in a fast-paced environment.";
   for (const line of lines) {
@@ -243,23 +306,27 @@ function generateHeuristicRoast(resumeText: string): RoastResponse {
     },
     experience: {
       critique: "A list of duties with zero quantifiable business impact. Recruiters need outcomes, not chores.",
-      items: finalExp.map(item => {
-        const words = item.split(' ').slice(0, 5).join(' ');
+      items: displayExp.map(item => {
+        const titleWords = item.title.split(' ').slice(0, 5).join(' ');
+        const bulletsText = item.bullets.join('; ');
+        const snippet = bulletsText.length > 60 ? bulletsText.slice(0, 60) + '...' : bulletsText;
         return {
-          original: item,
-          improved: `Engineered and optimized core flows related to ${words}, leading to a 28% reduction in latency and saving 8 team-hours weekly.`,
-          explanation: "Coding tasks are generic fluff. Tell us the actual outcome and time saved."
+          original: `${item.title}: ${bulletsText}`,
+          improved: `Lead Engineer for ${titleWords} — Re-engineered core workflows to reduce latency by 28% and save 8+ hours of weekly manual operations.`,
+          explanation: `The bullets for "${titleWords}" are generic tasks (${snippet}). Quantify outcomes and technical decisions.`
         };
       })
     },
     projects: {
       critique: "Standard tutorial projects. Build real-world high-throughput applications to get noticed.",
-      items: finalProj.map(item => {
-        const words = item.split(' ').slice(0, 5).join(' ');
+      items: displayProj.map(item => {
+        const titleWords = item.title.split(' ').slice(0, 5).join(' ');
+        const bulletsText = item.bullets.join('; ');
+        const snippet = bulletsText.length > 60 ? bulletsText.slice(0, 60) + '...' : bulletsText;
         return {
-          original: item,
-          improved: `Designed and deployed a highly scalable architecture for ${words}, supporting 2,000+ daily active users.`,
-          explanation: "If a junior dev can copy this from a YouTube tutorial, it's not a differentiator."
+          original: `${item.title}: ${bulletsText}`,
+          improved: `System Architecture for ${titleWords} — Designed and deployed highly scalable cloud workflows supporting 2,000+ daily active users.`,
+          explanation: `Your project "${titleWords}" is described as basic tasks (${snippet}). Highlight architectural scaling and user metrics.`
         };
       })
     },
@@ -462,18 +529,18 @@ interface RoastResponse {
   experience: {
     critique: string; // A direct, biting roast of their job experience section (e.g. lack of metrics). MAXIMUM 20 WORDS. NO HR/MENTOR SUGGESTIONS.
     items: Array<{
-      original: string; // A weak/unimpressive bullet point or phrase found in the experience section.
-      improved: string; // The improved, high-impact version of that bullet point.
-      explanation: string; // A direct, biting, and savage roast of why this bullet point is terrible (adhering strictly to the ROAST FORMAT or APPRECIATION FORMAT above).
-    }>; // Provide improvements for ALL major roles or bullet points found in their experience section (do not limit yourself to 2 or 3; mention all of them).
+      original: string; // The original role/company title along with its job description bullets. Combine the role title and all of its description bullets here.
+      improved: string; // The improved, high-impact version of this role and its description bullets.
+      explanation: string; // A direct, biting, and savage roast of why this role's details are terrible (adhering strictly to the ROAST FORMAT or APPRECIATION FORMAT above).
+    }>; // Provide improvements for ALL major roles/experiences listed in the resume (do not treat each individual bullet point as a separate job; group bullets by company/role).
   };
   projects: {
     critique: string; // A direct, biting roast of their projects (e.g. generic tutorial projects). MAXIMUM 20 WORDS. NO HR/MENTOR SUGGESTIONS.
     items: Array<{
-      original: string; // A weak project description line or detail.
-      improved: string; // A stronger project bullet or framing.
+      original: string; // The original project title and its description bullets. Combine the project title and all of its description bullets here.
+      improved: string; // A stronger project title and high-impact description bullets.
       explanation: string; // A direct, biting, and savage roast of why this project is terrible (adhering strictly to the ROAST FORMAT or APPRECIATION FORMAT above).
-    }>; // Provide improvements for ALL major projects listed in the resume (do not stop at 2 or 3; mention every single project present).
+    }>; // Provide improvements for ALL major projects listed in the resume (do not treat each individual bullet point as a separate project; group bullets by project).
   };
   skills: {
     critique: string; // A direct, biting roast of their skills list (e.g. office tools). MAXIMUM 20 WORDS. NO HR/MENTOR SUGGESTIONS.
