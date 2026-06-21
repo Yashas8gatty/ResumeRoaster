@@ -5,6 +5,7 @@ import {
   Sparkles, Eye, Briefcase, FolderGit2, Cpu, Award, 
   Trash2, PlusCircle, Edit3, ArrowRight, CornerDownRight
 } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface RoastResponse {
   score: number;
@@ -80,6 +81,32 @@ interface ResultsViewProps {
   data: RoastResponse;
   onResumeUpload: () => void;
 }
+
+const CollapsibleText: React.FC<{ text: string; maxLength?: number }> = ({ text, maxLength = 100 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  if (text.length <= maxLength) {
+    return <p className="text-[14px] leading-relaxed">"{text}"</p>;
+  }
+  
+  return (
+    <div className="space-y-1">
+      <p className="text-[14px] leading-relaxed text-left">
+        "{isExpanded ? text : `${text.slice(0, maxLength)}...`}"
+      </p>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsExpanded(!isExpanded);
+        }}
+        className="text-[12px] text-accent font-extrabold flex items-center gap-1 active:scale-[0.98] py-1 mt-1 cursor-pointer"
+      >
+        {isExpanded ? 'Collapse roast' : 'Expand roast'}
+      </button>
+    </div>
+  );
+};
 
 export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }) => {
   const fixWorkshopRef = useRef<HTMLDivElement>(null);
@@ -369,6 +396,967 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
   };
 
   const parsedFixes = parseFixes(data.topFixes || []);
+
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    const currentSection = activeSection || 'Summary';
+    
+    return (
+      <div className="w-full px-4 py-4 text-left flex flex-col gap-4 bg-bg selection:bg-accent/10 selection:text-accent overflow-x-hidden">
+        
+        {/* Title */}
+        <div className="flex justify-between items-center mb-2 pb-2 border-b border-neutral-900">
+          <div className="space-y-0.5">
+            <h1 className="font-heading font-extrabold text-[22px] tracking-tight text-primary">Resume Roast</h1>
+            <p className="text-[12px] font-bold text-accent">Recruiter-grade criticism.</p>
+          </div>
+          <button
+            onClick={onResumeUpload}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-primary hover:text-accent transition-all border border-neutral-900 bg-white rounded-xl shadow-subtle cursor-pointer active:scale-[0.98]"
+          >
+            New Victim →
+          </button>
+        </div>
+
+        {/* TOP TAB BAR NAVIGATION */}
+        <div className="w-full overflow-x-auto scrollbar-none flex gap-2 pb-2 mb-2 border-b border-neutral-200">
+          <div className="flex gap-2 flex-nowrap min-w-full">
+            {(['overview', 'heatmap', 'debate'] as const).map((tab) => {
+              const label = tab === 'overview' ? 'Overview' : (tab === 'heatmap' ? 'Roast Receipts' : 'Debate & Rehab');
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setActiveTab(tab);
+                    if (tab === 'heatmap' && !activeSection) {
+                      setActiveSection('Summary');
+                    }
+                  }}
+                  className={`py-2.5 px-4 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-150 flex-shrink-0 flex items-center gap-1.5 active:scale-[0.98] border cursor-pointer ${
+                    isActive 
+                      ? 'text-white bg-neutral-900 border-neutral-900 shadow-sm' 
+                      : 'text-secondary bg-white border-neutral-200 hover:text-primary'
+                  }`}
+                >
+                  {label}
+                  {tab === 'heatmap' && (
+                    <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-full ${
+                      isActive ? 'bg-accent text-white' : 'bg-error text-white animate-pulse'
+                    }`}>
+                      {data.topFixes.length} Flaws
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tab content rendering */}
+        <div className="w-full flex-grow">
+          {activeTab === 'overview' && (
+            <div className="w-full flex flex-col gap-4">
+              
+              {/* Score Card */}
+              <div className="w-full bg-neutral-900 text-bg p-4 rounded-xl border border-neutral-900 shadow-sm flex items-center justify-between relative overflow-hidden">
+                <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[radial-gradient(#FAF9F6_1px,transparent_1px)] bg-[size:10px_10px]" />
+                
+                <div className="absolute right-3 top-3 pointer-events-none rotate-[-6deg] z-10 opacity-90 select-none scale-75 origin-top-right">
+                  <div className={`stamp-active font-heading font-black text-sm tracking-widest px-2.5 py-1 border-2 rounded uppercase text-center ${scoreInfo.stampColor}`}>
+                    {scoreInfo.stamp}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 z-10">
+                  <div className="flex flex-col items-center justify-center bg-neutral-800 rounded-xl p-2 min-w-[64px]">
+                    <span className="text-3xl font-black text-white tracking-tighter">{data.score}</span>
+                    <span className="text-[9px] font-bold text-neutral-400 mt-0.5 border-t border-neutral-700/60 pt-0.5">/ 100</span>
+                  </div>
+                  
+                  <div className="text-left space-y-0.5 pr-14">
+                    <h2 className="text-[15px] font-bold text-white tracking-tight leading-tight">
+                      {scoreInfo.verdict}
+                    </h2>
+                    <div className="flex items-center gap-1 text-[11px] text-neutral-300">
+                      <span className="text-neutral-400">Recruiter mood:</span>
+                      <span className="text-white font-extrabold">{scoreInfo.mood}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recruiter Reaction Card */}
+              <div className="w-full bg-white p-4 rounded-xl border border-neutral-900 shadow-sm text-left flex flex-col gap-3">
+                <span className="text-[12px] font-bold text-secondary uppercase tracking-widest block">Recruiter Reaction</span>
+                <blockquote className="text-[16px] font-extrabold text-primary tracking-tight leading-relaxed italic">
+                  "{data.whatRecruitersThink.quote || 'Your resume says everything except why you\'re useful.'}"
+                </blockquote>
+                
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-neutral-200 text-left">
+                  <div>
+                    <span className="text-[12px] font-bold text-secondary uppercase block">Scan Time</span>
+                    <span className="text-[16px] font-black text-primary">
+                      {data.score < 50 ? "2.4s" : (data.score < 75 ? "4.1s" : "6.8s")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[12px] font-bold text-secondary uppercase block">Memory</span>
+                    <span className="text-[16px] font-black text-primary">
+                      {Math.max(8, data.score - 45)}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[12px] font-bold text-secondary uppercase block">Odds</span>
+                    <span className={`text-[16px] font-black ${
+                      data.score < 50 ? 'text-error' : (data.score < 75 ? 'text-warning' : 'text-success')
+                    }`}>
+                      {data.score < 50 ? "Terrible" : (data.score < 75 ? "Maybe" : "High")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Session Roasting Notes */}
+              <div className="w-full bg-white p-4 rounded-xl border-2 border-neutral-900 border-l-[8px] border-l-accent shadow-sm flex flex-col gap-4">
+                <h3 className="text-[16px] font-black text-primary uppercase tracking-tight text-left">
+                  Session Roasting Notes
+                </h3>
+                <div className="flex flex-col gap-3">
+                  <div className={`p-4 rounded-xl border-2 flex flex-col gap-1.5 text-left ${
+                    data.firstImpression.severity === 'success' ? 'bg-success/[0.04] border-success/40' :
+                    data.firstImpression.severity === 'warning' ? 'bg-warning/[0.04] border-warning/40' :
+                    'bg-error/[0.04] border-error/40'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-black text-primary uppercase tracking-wider">First Impression</span>
+                      <span className={`text-[12px] font-black px-1.5 py-0.5 rounded uppercase ${
+                        data.firstImpression.severity === 'success' ? 'bg-success/20 text-success border border-success/30' :
+                        data.firstImpression.severity === 'warning' ? 'bg-warning/20 text-warning border border-warning/30' :
+                        'bg-error/20 text-error border border-error/30'
+                      }`}>
+                        {data.firstImpression.severity}
+                      </span>
+                    </div>
+                    <p className="text-[16px] font-black text-neutral-900 leading-relaxed italic">
+                      "{data.firstImpression.critique}"
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl border-2 border-accent/40 bg-accent/[0.04] flex flex-col gap-1.5 text-left">
+                    <span className="text-[12px] font-black text-primary uppercase tracking-wider block">Recruiter Mindset</span>
+                    <p className="text-[16px] font-black text-neutral-900 leading-relaxed italic">
+                      "{data.whatRecruitersThink.critique}"
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recruiter Speedrun */}
+              <div className="w-full bg-white p-4 rounded-xl border border-neutral-900 shadow-sm text-left">
+                <h3 className="text-[16px] font-black text-primary flex items-center gap-2 mb-4">
+                  <span className="w-2 h-3.5 bg-accent rounded-sm" />
+                  Recruiter Speedrun
+                </h3>
+                
+                <div className="flex flex-row gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-none">
+                  <div className="flex-shrink-0 w-[78vw] bg-neutral-50 p-4 rounded-xl border border-neutral-200 snap-center flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-success/15 text-success flex items-center justify-center font-extrabold text-xs border border-success flex-shrink-0">
+                      ✓
+                    </div>
+                    <div>
+                      <span className="text-[12px] font-bold text-secondary uppercase tracking-wider block">0 Seconds</span>
+                      <h4 className="text-[14px] font-bold text-primary">Saw title</h4>
+                      <p className="text-[12px] text-secondary leading-normal">Categorized candidate.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex-shrink-0 w-[78vw] bg-neutral-50 p-4 rounded-xl border border-neutral-200 snap-center flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-error/15 text-error flex items-center justify-center font-extrabold text-xs border border-error flex-shrink-0">
+                      ✗
+                    </div>
+                    <div>
+                      <span className="text-[12px] font-bold text-secondary uppercase tracking-wider block">2 Seconds</span>
+                      <h4 className="text-[14px] font-bold text-primary text-error">Skipped summary</h4>
+                      <p className="text-[12px] text-secondary leading-normal">Lost immediate attention.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex-shrink-0 w-[78vw] bg-neutral-50 p-4 rounded-xl border border-neutral-200 snap-center flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-success/15 text-success flex items-center justify-center font-extrabold text-xs border border-success flex-shrink-0">
+                      ✓
+                    </div>
+                    <div>
+                      <span className="text-[12px] font-bold text-secondary uppercase tracking-wider block">4 Seconds</span>
+                      <h4 className="text-[14px] font-bold text-primary">Read core stack</h4>
+                      <p className="text-[12px] text-secondary leading-normal">Identified raw skills.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex-shrink-0 w-[78vw] bg-neutral-50 p-4 rounded-xl border border-neutral-200 snap-center flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-error/15 text-error flex items-center justify-center font-extrabold text-xs border border-error flex-shrink-0">
+                      ✗
+                    </div>
+                    <div>
+                      <span className="text-[12px] font-bold text-secondary uppercase tracking-wider block">7 Seconds</span>
+                      <h4 className="text-[14px] font-bold text-primary text-error">Tab closed</h4>
+                      <p className="text-[12px] text-secondary leading-normal">Failed to seal follow-up.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Banner / CTA */}
+              <div 
+                onClick={() => {
+                  setActiveTab('heatmap');
+                  setActiveSection('Summary');
+                }}
+                className="bg-neutral-900 text-white p-6 rounded-xl border-2 border-neutral-900 shadow-sm flex flex-col gap-4 cursor-pointer relative overflow-hidden text-left active:scale-[0.98] transition-all"
+              >
+                <div className="absolute right-0 top-0 w-32 h-32 bg-accent/15 rounded-full blur-2xl -z-10" />
+                <div className="space-y-1 text-left">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-accent uppercase tracking-widest block bg-accent/20 px-2 py-0.5 rounded">Margin Notes Ready</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-error animate-ping" />
+                  </div>
+                  <h3 className="text-[16px] font-black tracking-tight text-white uppercase">Inspect Section-by-Section Critique</h3>
+                  <p className="text-[12px] text-neutral-300 leading-relaxed">
+                    See which bullet points are generic, which skills you must scrap, and read the brutal section-by-section breakdown.
+                  </p>
+                </div>
+                <button className="w-full h-12 inline-flex items-center justify-center gap-1.5 px-4 text-xs font-black uppercase tracking-wider text-neutral-900 bg-white rounded-xl shadow-sm">
+                  View Margin Notes →
+                </button>
+              </div>
+
+              {/* CTAs */}
+              <div className="flex flex-col gap-2.5 mt-2">
+                <button
+                  onClick={handleFixResumeClick}
+                  className="w-full h-12 bg-accent hover:bg-accent/90 text-white text-[15px] font-bold rounded-xl transition-all shadow-subtle flex items-center justify-center gap-2 cursor-pointer border border-accent active:scale-[0.98]"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Repair Resume Workshop
+                </button>
+                
+                <button
+                  onClick={handleShowReceiptsClick}
+                  className="w-full h-12 bg-white text-neutral-900 hover:bg-neutral-900 hover:text-white text-[15px] font-black uppercase tracking-wider rounded-xl transition-all border-2 border-neutral-900 shadow-subtle flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                >
+                  Inspect Roast Receipts →
+                </button>
+              </div>
+
+            </div>
+          )}
+
+          {activeTab === 'heatmap' && (
+            <div className="w-full flex flex-col gap-4">
+              
+              {/* Horizontal chips for sections */}
+              <div className="w-full overflow-x-auto scrollbar-none flex gap-2 pb-2">
+                <div className="flex gap-2 flex-nowrap">
+                  {sectionsList.map((section) => {
+                    const isActive = currentSection === section;
+                    return (
+                      <button
+                        key={section}
+                        onClick={() => setActiveSection(section)}
+                        className={`py-2.5 px-4 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-150 flex-shrink-0 cursor-pointer active:scale-[0.98] border ${
+                          isActive 
+                            ? 'text-white bg-neutral-900 border-neutral-900 shadow-sm' 
+                            : 'text-secondary bg-white border-neutral-200 hover:text-primary'
+                        }`}
+                      >
+                        {section}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Section Details - Story Card View */}
+              {currentSection === 'Summary' && (
+                <div className="w-full bg-white rounded-xl border border-neutral-900 shadow-sm p-4 flex flex-col gap-4 text-left">
+                  <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
+                    <h3 className="text-[18px] font-black text-primary uppercase">Summary & Pitch</h3>
+                    {renderReactionBadge(getSummarySeverity())}
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <div className="p-4 rounded-xl border border-neutral-200 bg-neutral-50/50 flex flex-col gap-1.5">
+                      <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">Original Text</span>
+                      <CollapsibleText text={summaryText} />
+                    </div>
+
+                    <div className="flex justify-center text-secondary py-0.5">
+                      <span className="text-lg">↓</span>
+                    </div>
+
+                    <div className={`p-4 rounded-xl border-2 flex gap-3 ${
+                      getSummarySeverity() === 'SEVERE' ? 'bg-error/5 border-error/20' :
+                      getSummarySeverity() === 'MODERATE' ? 'bg-amber-50/50 border-amber-900/10' :
+                      'bg-emerald-50/55 border-emerald-950/10'
+                    }`}>
+                      <span className="text-base flex-shrink-0 mt-0.5">
+                        {getSummarySeverity() === 'SEVERE' ? '🔥' : getSummarySeverity() === 'MODERATE' ? '⚠️' : '🟢'}
+                      </span>
+                      <div className="flex-grow">
+                        <span className="text-[11px] font-bold uppercase tracking-wider block mb-1">Recruiter Reaction</span>
+                        <p className="font-heading font-bold italic text-[16px] text-primary leading-relaxed">
+                          {summaryExplanation}
+                        </p>
+                      </div>
+                    </div>
+
+                    {data.improvedSummary.improved && (
+                      <>
+                        <div className="flex justify-center text-secondary py-0.5">
+                          <span className="text-lg">↓</span>
+                        </div>
+
+                        <div className="p-4 rounded-xl border border-neutral-900 bg-white text-primary leading-relaxed relative flex flex-col gap-1.5 shadow-subtle mt-1.5">
+                          <span className="absolute -top-2.5 left-4 px-2 py-0.5 bg-neutral-900 text-white rounded text-[9px] font-bold tracking-widest uppercase">
+                            ✨ Approved Rewrite
+                          </span>
+                          <p className="text-[14px] font-bold mt-1 leading-normal">
+                            "{data.improvedSummary.improved}"
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {currentSection === 'Skills' && (
+                <div className="w-full bg-white rounded-xl border border-neutral-900 shadow-sm p-4 flex flex-col gap-4 text-left">
+                  <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
+                    <h3 className="text-[18px] font-black text-primary uppercase">Skills & Utility</h3>
+                    {renderReactionBadge(getSkillsSeverity())}
+                  </div>
+
+                  <div className={`p-4 rounded-xl border flex gap-3 ${
+                    getSkillsSeverity() === 'SEVERE' ? 'bg-error/5 border-error/15' :
+                    getSkillsSeverity() === 'MODERATE' ? 'bg-amber-50/70 border-amber-900/10' :
+                    'bg-emerald-50/70 border-emerald-950/10'
+                  }`}>
+                    <span className="text-base flex-shrink-0">
+                      {getSkillsSeverity() === 'SEVERE' ? '🔥' : getSkillsSeverity() === 'MODERATE' ? '⚠️' : '🟢'}
+                    </span>
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider block mb-1">Critique</span>
+                      <p className="text-[14px] font-black text-primary leading-relaxed">
+                        {data.skills.critique || "Filter general office utilities and list core engineering frameworks."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                    <div className="border border-neutral-200 rounded-xl bg-white p-4 space-y-3">
+                      <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
+                        <span className="text-emerald-600 text-sm">✅</span>
+                        <span className="text-[12px] font-bold text-primary uppercase tracking-wider">Keep & Highlight</span>
+                      </div>
+                      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
+                        {data.skills.items.filter(s => s.rating >= 3).length > 0 ? (
+                          data.skills.items.filter(s => s.rating >= 3).map((skill, sIdx) => (
+                            <div key={sIdx} className="p-3 rounded-lg bg-emerald-50/30 border border-emerald-100/60 text-left">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[13px] font-bold text-emerald-955">{skill.name}</span>
+                                <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100/50 px-1.5 py-0.5 rounded">{skill.rating}/5</span>
+                              </div>
+                              {skill.comment && <p className="text-[11px] text-emerald-800/80 mt-1">{skill.comment}</p>}
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-[12px] text-secondary italic">No high-rated skills detected.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border border-neutral-200 rounded-xl bg-white p-4 space-y-3">
+                      <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
+                        <span className="text-error text-sm">❌</span>
+                        <span className="text-[12px] font-bold text-primary uppercase tracking-wider">Scrap or De-emphasize</span>
+                      </div>
+                      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
+                        {data.skills.items.filter(s => s.rating < 3).length > 0 ? (
+                          data.skills.items.filter(s => s.rating < 3).map((skill, sIdx) => (
+                            <div key={sIdx} className="p-3 rounded-lg bg-amber-50/40 border border-amber-100/60 text-left">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[13px] font-bold text-amber-955">{skill.name}</span>
+                                <span className="text-[10px] font-extrabold text-amber-700 bg-amber-100/50 px-1.5 py-0.5 rounded">{skill.rating}/5</span>
+                              </div>
+                              {skill.comment && <p className="text-[11px] text-amber-800/80 mt-1">{skill.comment}</p>}
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-[12px] text-secondary italic">No weak skills flagged to scrap.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentSection === 'Projects' && (
+                <div className="w-full flex flex-col gap-4">
+                  <div className="bg-white rounded-xl border border-neutral-900 shadow-sm p-4 flex flex-col gap-3 text-left">
+                    <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
+                      <h3 className="text-[18px] font-black text-primary uppercase">Projects Critique</h3>
+                      {renderReactionBadge(getProjectsSeverity())}
+                    </div>
+                    
+                    <div className={`p-4 rounded-xl border flex gap-3 ${
+                      getProjectsSeverity() === 'SEVERE' ? 'bg-error/5 border-error/15' :
+                      getProjectsSeverity() === 'MODERATE' ? 'bg-amber-50/70 border-amber-900/10' :
+                      'bg-emerald-50/70 border-emerald-950/10'
+                    }`}>
+                      <span className="text-base flex-shrink-0">
+                        {getProjectsSeverity() === 'SEVERE' ? '🔥' : getProjectsSeverity() === 'MODERATE' ? '⚠️' : '🟢'}
+                      </span>
+                      <div>
+                        <span className="text-[11px] font-bold uppercase tracking-wider block mb-1">Critique</span>
+                        <p className="text-[14px] font-black text-primary leading-relaxed">{data.projects.critique}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {data.projects.items.map((item, pIdx) => {
+                    const diag = checkProjectDiagnostics(item.original);
+                    const scoreProj = (diag.hasMetrics ? 1 : 0) + (diag.hasImpact ? 1 : 0) + (diag.hasTechDecisions ? 1 : 0) + (diag.hasUsers ? 1 : 0);
+                    const projectItemSeverity = scoreProj < 2 ? 'SEVERE' : (scoreProj < 3 ? 'MODERATE' : 'PRAISE');
+
+                    return (
+                      <div key={pIdx} className="bg-white rounded-xl border border-neutral-900 shadow-sm p-4 flex flex-col gap-4 text-left">
+                        <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
+                          <span className="text-[14px] font-bold text-primary">Project #{pIdx + 1}</span>
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                            projectItemSeverity === 'SEVERE' ? 'bg-error/10 text-error' :
+                            projectItemSeverity === 'MODERATE' ? 'bg-warning/10 text-warning' :
+                            'bg-success/15 text-success'
+                          }`}>
+                            {projectItemSeverity}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                          <div className="p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/50 flex flex-col gap-1">
+                            <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">Original text</span>
+                            <CollapsibleText text={item.original} />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">Diagnostics Checklist</span>
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${
+                                diag.hasMetrics ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
+                              }`}>
+                                <span>{diag.hasMetrics ? '✅' : '❌'}</span>
+                                <span>Metrics</span>
+                              </div>
+                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${
+                                diag.hasImpact ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
+                              }`}>
+                                <span>{diag.hasImpact ? '✅' : '❌'}</span>
+                                <span>Impact</span>
+                              </div>
+                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${
+                                diag.hasTechDecisions ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
+                              }`}>
+                                <span>{diag.hasTechDecisions ? '✅' : '❌'}</span>
+                                <span>Tech decisions</span>
+                              </div>
+                              <div className={`flex items-center gap-1.5 p-2 rounded border text-[11px] font-semibold ${
+                                diag.hasUsers ? 'bg-emerald-50/55 border-emerald-200 text-emerald-900' : 'bg-amber-50/30 border-amber-105 text-amber-900'
+                              }`}>
+                                <span>{diag.hasUsers ? '✅' : '❌'}</span>
+                                <span>Users / Scale</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center text-secondary py-0.5">
+                            <span className="text-lg">↓</span>
+                          </div>
+
+                          <div className={`border p-4 rounded-xl text-left ${
+                            projectItemSeverity === 'SEVERE' ? 'bg-error/5 border-error/10' :
+                            projectItemSeverity === 'MODERATE' ? 'bg-accent/5 border-accent/15' :
+                            'bg-success/5 border-success/15'
+                          }`}>
+                            <span className={`text-[11px] font-bold uppercase tracking-wider block mb-1 ${
+                              projectItemSeverity === 'SEVERE' ? 'text-error' :
+                              projectItemSeverity === 'MODERATE' ? 'text-accent' :
+                              'text-success'
+                            }`}>
+                              {projectItemSeverity} CRITIQUE
+                            </span>
+                            <p className="font-heading font-bold italic text-[16px] text-primary leading-relaxed">
+                              {item.explanation}
+                            </p>
+                          </div>
+
+                          <div className="flex justify-center text-secondary py-0.5">
+                            <span className="text-lg">↓</span>
+                          </div>
+
+                          <div className="p-4 rounded-xl border border-neutral-900 bg-white text-primary leading-relaxed relative flex flex-col gap-1.5 shadow-subtle mt-1.5">
+                            <span className="absolute -top-2.5 left-4 px-2 py-0.5 bg-neutral-900 text-white rounded text-[9px] font-bold tracking-widest uppercase">
+                              ✨ Recruiter's Rewrite
+                            </span>
+                            <p className="text-[14px] font-bold mt-1 leading-normal">
+                              "{item.improved}"
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {currentSection === 'Experience' && (
+                <div className="w-full flex flex-col gap-4">
+                  <div className="bg-white rounded-xl border border-neutral-900 shadow-sm p-4 flex flex-col gap-3 text-left">
+                    <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
+                      <h3 className="text-[18px] font-black text-primary uppercase">Experience Critique</h3>
+                      {renderReactionBadge(getExperienceSeverity())}
+                    </div>
+                    
+                    <div className={`p-4 rounded-xl border flex gap-3 ${
+                      getExperienceSeverity() === 'SEVERE' ? 'bg-error/5 border-error/15' :
+                      getExperienceSeverity() === 'MODERATE' ? 'bg-amber-50/70 border-amber-900/10' :
+                      'bg-emerald-50/70 border-emerald-950/10'
+                    }`}>
+                      <span className="text-base flex-shrink-0">
+                        {getExperienceSeverity() === 'SEVERE' ? '🔥' : getExperienceSeverity() === 'MODERATE' ? '⚠️' : '🟢'}
+                      </span>
+                      <div>
+                        <span className="text-[11px] font-bold uppercase tracking-wider block mb-1">Critique</span>
+                        <p className="text-[14px] font-black text-primary leading-relaxed">{data.experience.critique}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {data.experience.items.map((item, eIdx) => {
+                    const tag = getBulletTag(item.original);
+                    const expItemSeverity = tag.label.includes('Generic') ? 'SEVERE' : (tag.label.includes('Needs') ? 'MODERATE' : 'PRAISE');
+
+                    return (
+                      <div key={eIdx} className="bg-white rounded-xl border border-neutral-900 shadow-sm p-4 flex flex-col gap-4 text-left">
+                        <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
+                          <span className="text-[14px] font-bold text-primary">Role Bullet #{eIdx + 1}</span>
+                          <div className="flex gap-1.5">
+                            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider ${tag.bg}`}>
+                              {tag.label}
+                            </span>
+                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
+                              expItemSeverity === 'SEVERE' ? 'bg-error/10 text-error' :
+                              expItemSeverity === 'MODERATE' ? 'bg-warning/10 text-warning' :
+                              'bg-success/15 text-success'
+                            }`}>
+                              {expItemSeverity}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                          <div className="p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/50 flex flex-col gap-1">
+                            <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">Original Bullet</span>
+                            <CollapsibleText text={item.original} />
+                          </div>
+
+                          <div className="flex justify-center text-secondary py-0.5">
+                            <span className="text-lg">↓</span>
+                          </div>
+
+                          <div className={`border p-4 rounded-xl text-left ${
+                            expItemSeverity === 'SEVERE' ? 'bg-error/5 border-error/10' :
+                            expItemSeverity === 'MODERATE' ? 'bg-accent/5 border-accent/15' :
+                            'bg-success/5 border-success/15'
+                          }`}>
+                            <span className={`text-[11px] font-bold uppercase tracking-wider block mb-1 ${
+                              expItemSeverity === 'SEVERE' ? 'text-error' :
+                              expItemSeverity === 'MODERATE' ? 'text-accent' :
+                              'text-success'
+                            }`}>
+                              {expItemSeverity} OBSERVATION
+                            </span>
+                            <p className="font-heading font-bold italic text-[16px] text-primary leading-relaxed">
+                              {item.explanation}
+                            </p>
+                          </div>
+
+                          <div className="flex justify-center text-secondary py-0.5">
+                            <span className="text-lg">↓</span>
+                          </div>
+
+                          <div className="p-4 rounded-xl border border-neutral-900 bg-white text-primary leading-relaxed relative flex flex-col gap-1.5 shadow-subtle mt-1.5">
+                            <span className="absolute -top-2.5 left-4 px-2 py-0.5 bg-neutral-900 text-white rounded text-[9px] font-bold tracking-widest uppercase">
+                              ✨ Recruiter's Rewrite
+                            </span>
+                            <p className="text-[14px] font-bold mt-1 leading-normal">
+                              "{item.improved}"
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {currentSection === 'Achievements' && (
+                <div className="w-full bg-white rounded-xl border border-neutral-900 shadow-sm p-4 flex flex-col gap-4 text-left">
+                  <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
+                    <h3 className="text-[18px] font-black text-primary uppercase">Achievements</h3>
+                    {renderReactionBadge(getAchievementsSeverity())}
+                  </div>
+
+                  {getAchievementsSeverity() === 'PRAISE' ? (
+                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-950/10 text-emerald-900 space-y-2 text-left">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🏆</span>
+                        <h4 className="text-[14px] font-bold">PRAISE: Standout Details Detected</h4>
+                      </div>
+                      <p className="text-[12px] leading-relaxed">
+                        The accomplishments mentioned here instantly catch a recruiter's eye. There is evidence of actual standout accolades or high-quality project outcomes. Keep these up front and center.
+                      </p>
+                    </div>
+                  ) : getAchievementsSeverity() === 'MODERATE' ? (
+                    <div className="p-4 rounded-xl bg-amber-50 border border-amber-900/20 text-amber-900 space-y-2 text-left">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">⚠️</span>
+                        <h4 className="text-[14px] font-bold text-amber-955">MODERATE: Decent but weak</h4>
+                      </div>
+                      <p className="text-[12px] leading-relaxed">
+                        Your accomplishments are acceptable, but they lack clear competitive context or exceptional performance indicators. Emphasize actual outcomes to elevate these to standouts.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-error/5 border border-error/15 text-error-950 space-y-2 text-left">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🔥</span>
+                        <h4 className="text-[14px] font-bold text-error">SEVERE: Participation Isn't Achievement</h4>
+                      </div>
+                      <p className="text-[12px] leading-relaxed">
+                        Your milestones lack clear evidence of standout accolades or exceptional performance. Recruiter feedback: "We see many people who 'worked on' things, but very few who actually achieved standout results." Try to re-phrase your achievements to show competitive context or organizational scale.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="border border-neutral-200 rounded-xl bg-white p-4 space-y-3">
+                    <span className="text-[12px] font-bold text-secondary uppercase tracking-widest block">Accolade Verification Guidelines</span>
+                    <ul className="space-y-2.5">
+                      <li className="flex gap-2 text-[12px] text-secondary leading-normal">
+                        <span className="text-accent font-bold">•</span>
+                        <span><strong>Avoid 'Vapor Accolades':</strong> Never list generic certificates (e.g. 'Completed SQL course') under achievements. High-performing resumes list raw competitive rankings, patents, or dollar/percentage savings.</span>
+                      </li>
+                      <li className="flex gap-2 text-[12px] text-secondary leading-normal">
+                        <span className="text-accent font-bold">•</span>
+                        <span><strong>Link to Evidence:</strong> If you built a project that had 5,000+ stars on GitHub or was used by a company, state the raw scale directly.</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {currentSection === 'Verdict' && (
+                <div className="w-full flex flex-col gap-4 text-left">
+                  <div className="bg-white p-4 rounded-xl border border-neutral-900 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
+                      <h4 className="text-[14px] font-bold text-primary uppercase tracking-wide">Recruiter Assessment</h4>
+                      {renderReactionBadge(getVerdictSeverity())}
+                    </div>
+                    
+                    <p className="font-heading font-bold italic text-[16px] text-primary leading-relaxed">
+                      {data.score >= 85 
+                        ? "Excellent structure and strong credentials. With minor tweaks to wording, you are ready to apply."
+                        : data.score >= 70
+                          ? "Reasonable base, but key impact indicators are missing. Fix the flagged items before submitting."
+                          : "Critical issues found. A recruiter will likely skip this within 7 seconds. Extensive revision needed."
+                      }
+                    </p>
+                    
+                    <p className="text-[12px] text-secondary leading-relaxed">
+                      {data.whatRecruitersThink.critique}
+                    </p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-xl border border-neutral-250 flex items-center gap-4 justify-between">
+                    <div className="space-y-1">
+                      <h4 className="text-[12px] font-bold text-secondary uppercase tracking-widest">Candidate Resume Score</h4>
+                      <p className="text-[11px] text-secondary leading-normal">Formatting, keywords, and metric density scan.</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className="relative w-12 h-12 rounded-full border-2 border-neutral-200 flex items-center justify-center font-black text-md text-primary bg-neutral-50 shadow-inner">
+                        {data.score}
+                      </div>
+                      <div className="text-left">
+                        <span className="text-[9px] font-bold text-secondary uppercase block">Verdict</span>
+                        <span className="text-[12px] font-black text-primary">{scoreInfo.verdict}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <h4 className="text-[12px] font-bold text-secondary uppercase tracking-widest">Top 3 Critical Fixes</h4>
+                    <div className="flex flex-col gap-3">
+                      {parsedFixes.slice(0, 3).map((fix, fIdx) => (
+                        <div key={fIdx} className="p-4 rounded-xl border border-neutral-900 bg-white flex items-start gap-3 shadow-subtle">
+                          <div className="p-2 rounded-lg bg-neutral-50 border border-neutral-200 text-primary flex-shrink-0">
+                            {fix.icon}
+                          </div>
+                          <div className="space-y-1.5 flex-grow">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
+                                fix.action === 'REMOVE' ? 'bg-error/10 text-error' :
+                                fix.action === 'ADD' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+                              }`}>
+                                {fix.action}
+                              </span>
+                              <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded ${
+                                fix.impact === 'HIGH' ? 'bg-error text-white' :
+                                fix.impact === 'MEDIUM' ? 'bg-warning text-white' : 'bg-secondary text-white'
+                              }`}>
+                                {fix.impact} IMPACT
+                              </span>
+                            </div>
+                            <p className="text-[12px] text-primary leading-normal font-medium">
+                              {fix.explanation}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center pt-2">
+                    <button
+                      onClick={handleFixResumeClick}
+                      className="w-full h-12 bg-neutral-900 text-white hover:bg-neutral-800 text-[14px] font-bold uppercase tracking-wider rounded-xl shadow-subtle transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+                    >
+                      <span>Repair Resume Workshop</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+
+          {activeTab === 'debate' && (
+            <div className="w-full flex flex-col gap-5 pb-24 text-left">
+              
+              {/* Debate Recruiter Chat widget */}
+              <div className="w-full bg-white p-4 rounded-xl border border-neutral-900 shadow-sm flex flex-col gap-4">
+                <div className="space-y-1">
+                  <h3 className="text-[16px] font-black text-primary flex items-center gap-2">
+                    <span className="w-2 h-3.5 rounded bg-accent" />
+                    Debate the Recruiter
+                  </h3>
+                  <p className="text-[12px] text-secondary">
+                    Argue your score, justify projects, or ask how to fix specific details.
+                  </p>
+                </div>
+
+                <div className="border border-neutral-900 rounded-xl bg-neutral-50/50 p-3 h-[320px] overflow-y-auto flex flex-col gap-3 relative scrollbar-none text-left">
+                  {chatMessages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-4 text-secondary space-y-1.5">
+                      <span className="text-xl">💬</span>
+                      <p className="text-[12px] font-bold">Conversation started.</p>
+                      <p className="text-[11px] max-w-[200px]">Ask a question or pick a prompt below.</p>
+                    </div>
+                  ) : (
+                    chatMessages.map((msg, index) => (
+                      <div
+                        key={index}
+                        className={`flex gap-2.5 max-w-[88%] ${msg.role === 'user' ? 'self-end flex-row-reverse' : 'self-start'}`}
+                      >
+                        {msg.role === 'assistant' && (
+                          <div className="w-6.5 h-6.5 rounded-full bg-neutral-900 border border-neutral-900 flex items-center justify-center font-bold text-[9px] text-white flex-shrink-0">
+                            ✍️
+                          </div>
+                        )}
+                        <div
+                          className={`p-3 rounded-xl border text-[12px] leading-relaxed shadow-sm ${
+                            msg.role === 'user'
+                              ? 'bg-white border-neutral-900 text-primary rounded-tr-none'
+                              : 'bg-neutral-950 border-neutral-950 text-white rounded-tl-none font-medium'
+                          }`}
+                        >
+                          {msg.content}
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {isLoadingChat && (
+                    <div className="flex gap-2.5 self-start items-center max-w-[88%] animate-pulse">
+                      <div className="w-6.5 h-6.5 rounded-full bg-neutral-900 flex items-center justify-center font-bold text-[9px] text-white flex-shrink-0 animate-spin">
+                        ⏳
+                      </div>
+                      <div className="p-3 bg-neutral-900/10 border border-dashed border-neutral-300 text-secondary text-[11px] rounded-xl rounded-tl-none">
+                        {typingMessage}
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                <div className="flex flex-row gap-2 overflow-x-auto pb-2 scrollbar-none flex-nowrap">
+                  {presetQuestions.map((q, idx) => (
+                    <button
+                      key={idx}
+                      disabled={isLoadingChat}
+                      onClick={() => handleSendPreset(q)}
+                      className="text-[11px] font-bold px-3 py-2 rounded-full border border-neutral-200 hover:border-neutral-900 bg-white text-secondary hover:text-primary transition-all disabled:opacity-50 flex-shrink-0 cursor-pointer active:scale-[0.98]"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Summary Upgrade Stacked */}
+              <div className="bg-white p-4 rounded-xl border border-neutral-900 shadow-sm space-y-4">
+                <h3 className="text-[16px] font-bold text-primary flex items-center gap-2">
+                  <span className="w-2 h-3.5 bg-success rounded-sm" />
+                  Summary Upgrade
+                </h3>
+                <div className="flex flex-col gap-3">
+                  <div className="border border-error bg-error/5 rounded-xl p-4 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[9px] font-bold text-error uppercase bg-error/10 border border-error/20 px-1.5 py-0.5 rounded tracking-wider self-start">Original</span>
+                      <p className="text-[12px] text-secondary mt-2.5 leading-relaxed italic">
+                        "{data.improvedSummary.original}"
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-center text-secondary py-1">
+                    <span className="text-lg">↓</span>
+                  </div>
+
+                  <div className="border border-success bg-success/5 rounded-xl p-4 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[9px] font-bold text-success uppercase bg-success/10 border border-success/20 px-1.5 py-0.5 rounded tracking-wider self-start">Improved</span>
+                      <p className="text-[12px] text-primary font-bold mt-2.5 leading-relaxed">
+                        "{data.improvedSummary.improved}"
+                      </p>
+                    </div>
+                    <div className="text-[11px] text-secondary mt-2.5 pt-2 border-t border-success/10">
+                      <span className="font-extrabold text-success">Why:</span> {data.improvedSummary.explanation}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upgrades Carousel */}
+              <div className="bg-white p-4 rounded-xl border border-neutral-900 shadow-sm space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-[16px] font-bold text-primary flex items-center gap-2">
+                    <span className="w-2 h-3.5 bg-success rounded-sm" />
+                    Bullet Upgrade Carousel
+                  </h3>
+                  <span className="text-[11px] text-secondary font-semibold">Swipe cards →</span>
+                </div>
+                
+                <div className="flex flex-row overflow-x-auto snap-x snap-mandatory flex-nowrap gap-4 pb-2 scrollbar-none">
+                  {[...data.experience.items, ...data.projects.items].map((item, idx) => (
+                    <div key={idx} className="flex-shrink-0 w-[82vw] snap-center border border-neutral-900 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="px-4 py-2 border-b border-neutral-100 bg-neutral-50/50 flex justify-between items-center">
+                          <span className="text-[11px] font-extrabold text-primary">Upgrade #{idx + 1}</span>
+                        </div>
+
+                        <div className="flex flex-col">
+                          <div className="p-4 bg-error/5 flex flex-col justify-center border-b border-neutral-100 text-left">
+                            <span className="text-[9px] font-bold text-error uppercase bg-error/10 border border-error/20 px-1.5 py-0.5 rounded tracking-wider self-start">Original</span>
+                            <p className="text-[12px] text-secondary mt-2 leading-relaxed">
+                              "{item.original}"
+                            </p>
+                          </div>
+
+                          <div className="p-4 bg-success/5 flex flex-col justify-center text-left">
+                            <span className="text-[9px] font-bold text-success uppercase bg-success/10 border border-success/20 px-1.5 py-0.5 rounded tracking-wider self-start">Rewrite</span>
+                            <p className="text-[12px] text-primary font-bold mt-2 leading-relaxed">
+                              "{item.improved}"
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-neutral-50 border-t border-neutral-200 text-[11px] text-secondary flex items-start gap-1.5 leading-relaxed text-left">
+                        <CornerDownRight className="w-3.5 h-3.5 text-accent mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="font-extrabold text-primary">Why:</span> {item.explanation}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Formatting Directives */}
+              <div className="bg-white p-4 rounded-xl border border-neutral-900 shadow-sm space-y-4">
+                <h3 className="text-[16px] font-bold text-primary flex items-center gap-2">
+                  <span className="w-2 h-3.5 bg-success rounded-sm" />
+                  Formatting Directives
+                </h3>
+                <ul className="flex flex-col gap-3 pl-1">
+                  <li className="flex items-start gap-2 text-[12px] text-secondary">
+                    <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                    <span>Stick to a single-column layout. Two columns look nice but break older ATS readers completely.</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-[12px] text-secondary">
+                    <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                    <span>Use standard fonts (Inter, Arial, Georgia, Calibri). Custom fonts sometimes scan as garbage text.</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-[12px] text-secondary">
+                    <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                    <span>Use simple headers: 'Work Experience', 'Projects', 'Skills'. Avoid creative section names.</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-[12px] text-secondary">
+                    <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                    <span>Ensure your contact info is actual text, not embedded inside a graphic image.</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Floating/Sticky Debate Input */}
+              <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-neutral-200 z-45 flex justify-center shadow-lg">
+                <form onSubmit={handleSendMessage} className="w-full max-w-md flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Argue your case..."
+                    disabled={isLoadingChat}
+                    className="flex-grow h-12 px-3 bg-white border border-neutral-900 rounded-xl text-[14px] text-primary focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50 placeholder:text-neutral-400"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoadingChat || !chatInput.trim()}
+                    className="h-12 px-5 bg-primary hover:bg-primary/95 text-white font-bold text-xs rounded-xl transition-all shadow-subtle border border-primary flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-[0.98]"
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[1500px] mx-auto px-10 py-4 text-left">

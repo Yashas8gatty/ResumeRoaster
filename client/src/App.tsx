@@ -4,8 +4,9 @@ import { LoadingView } from './components/LoadingView';
 import { ResultsView } from './components/ResultsView';
 import { AuthView } from './components/AuthView';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { AlertCircle, LogOut, History } from 'lucide-react';
+import { AlertCircle, LogOut, History, User } from 'lucide-react';
 import { HistoryModal } from './components/HistoryModal';
+import { useIsMobile } from './hooks/useIsMobile';
 
 type Step = 'idle' | 'loading' | 'results';
 
@@ -62,10 +63,12 @@ interface RoastResponse {
 // ─── Inner app (has access to AuthContext) ───────────────────────────────────
 function AppInner() {
   const { user, token, logout, isLoading } = useAuth();
+  const isMobile = useIsMobile();
   const [step, setStep] = useState<Step>('idle');
   const [roastData, setRoastData] = useState<RoastResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -119,34 +122,80 @@ function AppInner() {
 
       {/* Top Bar */}
       <header className="w-full border-b border-neutral-200/60 bg-white/70 backdrop-blur-sm sticky top-0 z-50 flex-shrink-0">
-        <div className="max-w-5xl mx-auto px-6 py-1 flex items-center justify-between">
-          {/* Brand */}
-          <div className="flex items-center select-none">
-            <img src="/rr_logo.png" alt="Resume Roast" className="h-17 w-auto" />
-          </div>
+        {isMobile ? (
+          /* 📱 Mobile Header (64px) */
+          <div className="h-16 px-4 flex items-center justify-between relative">
+            <div className="flex items-center select-none">
+              <img src="/rr_logo.png" alt="Resume Roast" className="h-8 w-auto" />
+            </div>
 
-          {/* User + actions */}
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-secondary hidden sm:block">
-              👋 <span className="font-semibold text-primary">{user.name}</span>
-            </span>
-            <button
-              id="history-btn"
-              title="Roast History"
-              onClick={() => setIsHistoryOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 text-xs font-bold text-secondary hover:text-primary hover:border-neutral-300 hover:bg-neutral-50 transition-all"
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="w-10 h-10 rounded-full border border-neutral-900 bg-neutral-100 flex items-center justify-center hover:bg-neutral-200 active:scale-[0.98] transition-all cursor-pointer shadow-subtle overflow-hidden"
+              title="Profile Menu"
             >
-              <History className="w-3.5 h-3.5" /> History
+              <User className="w-5 h-5 text-primary" />
             </button>
-            <button
-              id="logout-btn"
-              onClick={logout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 text-xs font-bold text-secondary hover:text-error hover:border-error/30 hover:bg-error/5 transition-all"
-            >
-              <LogOut className="w-3.5 h-3.5" /> Logout
-            </button>
+
+            {/* Mobile Dropdown Menu */}
+            {isMenuOpen && (
+              <div className="absolute top-16 right-4 w-48 bg-white border border-neutral-900 rounded-xl shadow-lg p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150 flex flex-col gap-2">
+                <div className="px-2 py-1.5 border-b border-neutral-100 text-left">
+                  <p className="text-[10px] text-secondary font-bold uppercase tracking-wider">Account</p>
+                  <p className="text-xs font-extrabold text-primary truncate mt-0.5">{user.name}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsHistoryOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center gap-2 w-full px-2 py-2 rounded-lg text-xs font-bold text-secondary hover:text-primary hover:bg-neutral-50 transition-all text-left cursor-pointer"
+                >
+                  <History className="w-4 h-4" /> History
+                </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center gap-2 w-full px-2 py-2 rounded-lg text-xs font-bold text-error hover:bg-error/5 transition-all text-left cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" /> Logout
+                </button>
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          /* 🖥️ Desktop Header (Unchanged) */
+          <div className="max-w-5xl mx-auto px-6 py-1 flex items-center justify-between">
+            {/* Brand */}
+            <div className="flex items-center select-none">
+              <img src="/rr_logo.png" alt="Resume Roast" className="h-17 w-auto" />
+            </div>
+
+            {/* User + actions */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-secondary hidden sm:block">
+                👋 <span className="font-semibold text-primary">{user.name}</span>
+              </span>
+              <button
+                id="history-btn"
+                title="Roast History"
+                onClick={() => setIsHistoryOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 text-xs font-bold text-secondary hover:text-primary hover:border-neutral-300 hover:bg-neutral-50 transition-all"
+              >
+                <History className="w-3.5 h-3.5" /> History
+              </button>
+              <button
+                id="logout-btn"
+                onClick={logout}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 text-xs font-bold text-secondary hover:text-error hover:border-error/30 hover:bg-error/5 transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5" /> Logout
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}
