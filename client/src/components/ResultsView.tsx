@@ -166,6 +166,14 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
   };
 
   const getAchievementsSeverity = () => {
+    const text = (data.resumeText || '').toLowerCase();
+    const hasHighRank = /\b(1st|2nd|3rd|first|second|third|winner|won|champion|gold\s+medal|silver\s+medal|bronze\s+medal|rank\b|placement|rank\s*:\s*\d+)\b/i.test(text);
+    const hasRunnerUp = /\b(runner-up|runner\s+up|runners-up|runners\s+up|runnerup|runnerups)\b/i.test(text);
+    
+    if (hasHighRank || hasRunnerUp) {
+      return 'PRAISE';
+    }
+    
     if (data.score < 60) return 'SEVERE';
     if (data.score < 75) return 'MODERATE';
     return 'PRAISE';

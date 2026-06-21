@@ -114,6 +114,50 @@ interface RoastResponse {
   resumeText?: string;
 }
 
+function calculateDynamicScore(resumeText: string, bullets: string[], foundSkills: string[]): number {
+  let score = 50;
+
+  // 1. Email check
+  if (/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/.test(resumeText)) {
+    score += 5;
+  }
+  // 2. Phone check
+  if (/\b\d{10}\b|\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/.test(resumeText)) {
+    score += 5;
+  }
+  // 3. GitHub or LinkedIn check
+  if (/github\.com/i.test(resumeText)) score += 5;
+  if (/linkedin\.com/i.test(resumeText)) score += 5;
+
+  // 4. Metrics & quantification check
+  const metricMatches = resumeText.match(/\b\d+(%|\s*percent|x|\s*k|\s*m|\s*billion|\s*million|\s*active\s*users)\b/ig) || [];
+  score += Math.min(metricMatches.length * 3, 15);
+
+  // 5. Structure & Bullets check
+  if (bullets.length > 5) score += 5;
+  if (bullets.length > 10) score += 5;
+
+  // 6. Skills matched
+  score += Math.min(foundSkills.length * 2, 15);
+
+  // 7. Length check
+  if (resumeText.length < 800) {
+    score -= 10;
+  } else if (resumeText.length > 1800 && resumeText.length < 7000) {
+    score += 10;
+  }
+
+  // 8. Achievements/Accolades check
+  const textLower = resumeText.toLowerCase();
+  const hasHighRank = /\b(1st|2nd|3rd|first|second|third|winner|won|champion|gold\s+medal|silver\s+medal|bronze\s+medal|rank|placement)\b/i.test(textLower);
+  const hasRunnerUp = /\b(runner\s*-?\s*up|runnerup|runnerups)\b/i.test(textLower);
+  if (hasHighRank || hasRunnerUp) {
+    score += 8;
+  }
+
+  return Math.max(38, Math.min(score, 94));
+}
+
 function generateHeuristicRoast(resumeText: string): RoastResponse {
   const lines = resumeText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   
@@ -166,8 +210,8 @@ function generateHeuristicRoast(resumeText: string): RoastResponse {
     "Developed a personal portfolio site to show coding projects."
   ];
 
-  const finalExp = expBullets.length > 0 ? expBullets.slice(0, 3) : defaultExp;
-  const finalProj = projBullets.length > 0 ? projBullets.slice(0, 2) : defaultProj;
+  const finalExp = expBullets.length > 0 ? expBullets.slice(0, 8) : defaultExp;
+  const finalProj = projBullets.length > 0 ? projBullets.slice(0, 8) : defaultProj;
 
   let originalSummary = "Passionate developer seeking opportunities to learn and grow in a fast-paced environment.";
   for (const line of lines) {
@@ -192,7 +236,7 @@ function generateHeuristicRoast(resumeText: string): RoastResponse {
   };
 
   return {
-    score: Math.floor(Math.random() * 20) + 40,
+    score: calculateDynamicScore(resumeText, bullets, foundSkills),
     firstImpression: {
       critique: "A standard textbook layout. Looks like a chore list, not a highlight reel. Lacks measurable output.",
       severity: "error"
@@ -410,7 +454,7 @@ Example of strong critique format:
 Analyze the provided resume text and generate a structured JSON roast. You MUST return ONLY a JSON object that adheres strictly to the following TypeScript interface:
 
 interface RoastResponse {
-  score: number; // Overall resume score from 0 to 100 based on standard industry expectations.
+  score: number; // Overall resume score from 0 to 100. This score must be dynamic and realistic: a great resume with clear metrics and projects should get 75-92, a decent one 55-74, and a weak one 30-54. Do not default every resume to under 50 just because you are roasting it.
   firstImpression: {
     critique: string; // A 1-2 sentence dry, highly cynical, and funny first impression. MAXIMUM 20 WORDS.
     severity: 'error' | 'warning' | 'success'; // 'error' if bad/cliché, 'warning' if meh, 'success' if outstanding.
@@ -421,7 +465,7 @@ interface RoastResponse {
       original: string; // A weak/unimpressive bullet point or phrase found in the experience section.
       improved: string; // The improved, high-impact version of that bullet point.
       explanation: string; // A direct, biting, and savage roast of why this bullet point is terrible (adhering strictly to the ROAST FORMAT or APPRECIATION FORMAT above).
-    }>; // Provide 2-3 key bullet point improvements.
+    }>; // Provide improvements for ALL major roles or bullet points found in their experience section (do not limit yourself to 2 or 3; mention all of them).
   };
   projects: {
     critique: string; // A direct, biting roast of their projects (e.g. generic tutorial projects). MAXIMUM 20 WORDS. NO HR/MENTOR SUGGESTIONS.
@@ -429,7 +473,7 @@ interface RoastResponse {
       original: string; // A weak project description line or detail.
       improved: string; // A stronger project bullet or framing.
       explanation: string; // A direct, biting, and savage roast of why this project is terrible (adhering strictly to the ROAST FORMAT or APPRECIATION FORMAT above).
-    }>; // Provide 1-2 project improvements.
+    }>; // Provide improvements for ALL major projects listed in the resume (do not stop at 2 or 3; mention every single project present).
   };
   skills: {
     critique: string; // A direct, biting roast of their skills list (e.g. office tools). MAXIMUM 20 WORDS. NO HR/MENTOR SUGGESTIONS.
@@ -437,7 +481,7 @@ interface RoastResponse {
       name: string; // The skill name.
       rating: number; // Your rating of this skill on their resume from 1 to 5.
       comment: string; // A direct, biting, and savage roast of this skill (adhering strictly to the ROAST FORMAT or APPRECIATION FORMAT above).
-    }>; // Roast 3-5 of their skills.
+    }>; // Roast all major skills found (up to 8 skills).
   };
   atsCompatibility: {
     critique: string; // A direct, biting roast of their ATS compatibility. MAXIMUM 20 WORDS. NO HR/MENTOR SUGGESTIONS.

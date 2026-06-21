@@ -68,13 +68,13 @@ export const LandingView: React.FC<LandingViewProps> = ({ onFileUpload, onLoadDe
             <span className="text-[10px] font-bold text-primary">Constructive Sarcasm Powered</span>
           </div>
 
-          {/* Maintenance Notice */}
+          {/* Maintenance Notice
           <div className="flex items-center gap-2 p-3.5 rounded-xl border border-warning/30 bg-warning/5 text-warning max-w-sm mx-auto text-left shadow-sm animate-fade">
             <AlertCircle className="w-4 h-4 flex-shrink-0 text-warning" />
             <p className="text-[11px] font-semibold leading-relaxed">
-              Under Maintenance: We are updating the configurations and will be back live shortly!
+              Under Maintenance: We are updating the configurations and will be back live shortly! 
             </p>
-          </div>
+          </div> */}
 
           <h1 className="text-3xl font-extrabold tracking-tight text-primary leading-tight font-heading">
             Upload your Resume.<br />
