@@ -20,6 +20,23 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 );
 
+// Helper to send real-time Discord alerts when events trigger
+async function sendDiscordNotification(content: string) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl || webhookUrl.trim() === '' || webhookUrl.includes('your_discord_webhook')) {
+    return;
+  }
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content })
+    });
+  } catch (err) {
+    console.error('Failed to send Discord notification:', err);
+  }
+}
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -365,6 +382,8 @@ interface RoastResponse {
 
 Do not include any markdown backticks (\`\`\`json ... \`\`\`) in your response. Return ONLY raw valid JSON matching this schema.`;
 
+    let isFallbackMock = false;
+
     if (!isRoastGenerated) {
       try {
         const response = await openai.chat.completions.create({
@@ -385,7 +404,10 @@ Do not include any markdown backticks (\`\`\`json ... \`\`\`) in your response. 
       } catch (apiErr: any) {
         console.warn('[ROAST] Gemini API call failed (likely Rate Limit 429). Falling back to mock roast. Error:', apiErr.message || apiErr);
         roastData = generateHeuristicRoast(resumeText);
+        isFallbackMock = true;
       }
+    } else {
+      isFallbackMock = true;
     }
 
     roastData.resumeText = resumeText;
@@ -411,10 +433,23 @@ Do not include any markdown backticks (\`\`\`json ... \`\`\`) in your response. 
             email: user.email || '',
             score: roastData.score,
             resume_pdf: pdfUrl,
+            is_mock: isFallbackMock
           });
 
-          if (dbError) console.error('DB insert error:', dbError.message);
-          else console.log('[ROAST] Saved to DB for user:', user.id, '| score:', roastData.score);
+          if (dbError) {
+            console.error('DB insert error:', dbError.message);
+          } else {
+            console.log('[ROAST] Saved to DB for user:', user.id, '| score:', roastData.score);
+            
+            // Send Discord Webhook Notification
+            const userName = user.user_metadata?.name || 'Unknown User';
+            const userEmail = user.email || 'unknown@email.com';
+            if (isFallbackMock) {
+              await sendDiscordNotification(`⚠️ **Mock Roast Fallback** served to user **${userName}** (${userEmail}).\n📈 Score: **${roastData.score}**`);
+            } else {
+              await sendDiscordNotification(`🔥 **New Resume Roast** generated for user **${userName}** (${userEmail}).\n📈 Score: **${roastData.score}**\n📄 PDF: ${pdfUrl || 'None'}`);
+            }
+          }
         }
       } catch (saveErr) {
         console.error('Failed to save roast to DB (non-fatal):', saveErr);
@@ -548,6 +583,10 @@ app.post('/api/auth/signup', async (req: express.Request, res: express.Response)
     }
 
     console.log('[SIGNUP] Success — user created and signed in:', data.user.id);
+    
+    // Send Discord Webhook Notification on signup
+    await sendDiscordNotification(`🎉 **New User Signed Up!**\n👤 Name: **${name}**\n📧 Email: **${email}**`);
+
     res.status(201).json({
       token: signInData.session.access_token,
       user: { id: data.user.id, email, name }
@@ -605,7 +644,7 @@ app.get('/api/user/history', async (req: express.Request, res: express.Response)
 
     const { data, error } = await supabaseAdmin
       .from('roasts')
-      .select('id, name, email, score, resume_pdf, created_at')
+      .select('id, name, email, score, resume_pdf, created_at, is_mock')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 

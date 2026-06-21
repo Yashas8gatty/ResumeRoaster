@@ -9,6 +9,7 @@ interface HistoryItem {
   score: number;
   resume_pdf: string;
   created_at: string;
+  is_mock?: boolean;
 }
 
 interface HistoryModalProps {
@@ -134,7 +135,14 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose }) =
 
                       {/* Info */}
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-primary truncate">{item.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-bold text-primary truncate">{item.name}</p>
+                          {item.is_mock && (
+                            <span className="text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded bg-warning/10 text-warning border border-warning/20">
+                              ⚠️ System Fallback
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-[10px] text-secondary mt-1">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
