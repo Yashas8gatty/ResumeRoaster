@@ -68,11 +68,19 @@ export const LandingView: React.FC<LandingViewProps> = ({ onFileUpload, onLoadDe
             <span className="text-[10px] font-bold text-primary">Constructive Sarcasm Powered</span>
           </div>
 
+          {/* Maintenance Notice */}
+          <div className="flex items-center gap-2 p-3.5 rounded-xl border border-warning/30 bg-warning/5 text-warning max-w-sm mx-auto text-left shadow-sm animate-fade">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-warning" />
+            <p className="text-[11px] font-semibold leading-relaxed">
+              Under Maintenance: We are updating the configurations and will be back live shortly!
+            </p>
+          </div>
+
           <h1 className="text-3xl font-extrabold tracking-tight text-primary leading-tight font-heading">
             Upload your Resume.<br />
             <span className="text-accent">Get Roasted.</span>
           </h1>
-          
+
           <p className="text-[14px] text-secondary leading-relaxed max-w-sm mx-auto font-normal">
             We read your resume like a recruiter with 87 tabs open. If it survives, you probably get interviews.
           </p>
@@ -156,14 +164,22 @@ export const LandingView: React.FC<LandingViewProps> = ({ onFileUpload, onLoadDe
   return (
     <div className="max-w-[1200px] mx-auto px-10 w-full flex-1 flex items-center py-4">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center w-full">
-        
+
         {/* LEFT COLUMN: Headings & Features (7 cols) */}
         <div className="lg:col-span-7 space-y-8 text-left flex flex-col justify-center">
-          
+
           {/* Brand Label */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-neutral-900 bg-white shadow-subtle self-start">
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
             <span className="text-xs font-semibold text-primary">Constructive Sarcasm Powered</span>
+          </div>
+
+          {/* Maintenance Notice */}
+          <div className="flex items-center gap-3 p-4 rounded-xl border border-warning/30 bg-warning/5 text-warning max-w-md self-start text-left shadow-sm animate-fade">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-warning" />
+            <p className="text-xs font-semibold leading-relaxed">
+              Under Maintenance: We are updating the configurations and will be back live shortly!
+            </p>
           </div>
 
           {/* Hero Headline */}
@@ -195,7 +211,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onFileUpload, onLoadDe
 
         {/* RIGHT COLUMN: Drag & Drop Card (5 cols) */}
         <div className="lg:col-span-5 flex flex-col items-center justify-center w-full">
-          
+
           {/* Drag & Drop Area Box */}
           <div
             onDragEnter={handleDrag}
@@ -204,8 +220,8 @@ export const LandingView: React.FC<LandingViewProps> = ({ onFileUpload, onLoadDe
             onDrop={handleDrop}
             onClick={triggerFileInput}
             className={`w-full p-10 sm:p-14 rounded-large border border-dashed transition-all duration-200 cursor-pointer text-center bg-white shadow-subtle relative group flex flex-col items-center justify-center min-h-[300px]
-              ${isDragActive 
-                ? 'border-accent bg-accent/5' 
+              ${isDragActive
+                ? 'border-accent bg-accent/5'
                 : 'border-neutral-900 hover:border-accent'}`}
           >
             <input
