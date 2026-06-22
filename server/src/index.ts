@@ -59,11 +59,7 @@ const upload = multer({
   }
 });
 
-// Initialize OpenAI client configured to use Gemini's OpenAI-compatible endpoint
-const openai = new OpenAI({
-  apiKey: process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY,
-  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
-});
+
 
 // Type definitions for the structured OpenAI output
 interface RoastResponse {
