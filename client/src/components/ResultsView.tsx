@@ -55,6 +55,7 @@ interface RoastResponse {
     explanation: string;
   };
   resumeText?: string;
+  isMock?: boolean;
 }
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -129,6 +130,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
   const fixWorkshopRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'heatmap' | 'debate'>('overview');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [showMockModal, setShowMockModal] = useState(!!data.isMock);
   const [activeSection, setActiveSection] = useState<string>('Summary');
   const sectionsList = ['Summary', 'Skills', 'Projects', 'Experience', 'Achievements', 'Verdict'];
 
@@ -2553,6 +2555,33 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
         mood={getScoreVerdict(data.score).mood}
         fixes={data.topFixes}
       />
+
+      {showMockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[#111111] border-2 border-amber-500/50 rounded-2xl shadow-2xl p-6 text-center space-y-4">
+            <div className="w-16 h-16 bg-amber-500/10 border-2 border-amber-500 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-black text-white uppercase tracking-tight">AI Offline / Fallback Active</h3>
+              <p className="text-xs text-neutral-400">
+                We couldn't reach the Gemini AI server (keys missing or rate-limited).
+              </p>
+            </div>
+            <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl text-left">
+              <p className="text-xs text-neutral-300 leading-relaxed">
+                Your resume was roasted using our **local heuristic engine** instead. It still evaluates your structure, contact details, and quantification, but the feedback will be slightly generic.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowMockModal(false)}
+              className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-[#111111] text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer"
+            >
+              Proceed to Roast
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

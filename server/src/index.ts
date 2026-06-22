@@ -112,6 +112,7 @@ interface RoastResponse {
     explanation: string;
   };
   resumeText?: string;
+  isMock?: boolean;
 }
 
 function calculateDynamicScore(resumeText: string, bullets: string[], foundSkills: string[]): number {
@@ -588,6 +589,7 @@ Do not include any markdown backticks (\`\`\`json ... \`\`\`) in your response. 
       isFallbackMock = true;
     }
 
+    roastData.isMock = isFallbackMock;
     roastData.resumeText = resumeText;
 
     // ── Save to DB if user is authenticated ───────────────────────────────
