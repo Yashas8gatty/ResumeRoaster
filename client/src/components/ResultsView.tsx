@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronDown, ChevronUp, CheckCircle2,
   Sparkles, Eye, Briefcase, FolderGit2, Cpu, Award,
-  Trash2, PlusCircle, Edit3, ArrowRight, CornerDownRight
+  Trash2, PlusCircle, Edit3, ArrowRight, CornerDownRight,
+  Download
 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { RoastCardModal } from './RoastCardModal';
 
 interface RoastResponse {
   score: number;
@@ -126,6 +128,7 @@ const CollapsibleText: React.FC<{ text: string; maxLength?: number }> = ({ text,
 export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }) => {
   const fixWorkshopRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'heatmap' | 'debate'>('overview');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('Summary');
   const sectionsList = ['Summary', 'Skills', 'Projects', 'Experience', 'Achievements', 'Verdict'];
 
@@ -464,12 +467,21 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
             <h1 className="font-heading font-extrabold text-[22px] tracking-tight text-primary">Resume Roast</h1>
             <p className="text-[12px] font-bold text-accent">Recruiter-grade criticism.</p>
           </div>
-          <button
-            onClick={onResumeUpload}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-primary hover:text-accent transition-all border border-neutral-900 bg-white rounded-xl shadow-subtle cursor-pointer active:scale-[0.98]"
-          >
-            New Victim →
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-neutral-900 hover:bg-neutral-800 transition-all rounded-xl shadow-subtle cursor-pointer active:scale-[0.98]"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Certificate
+            </button>
+            <button
+              onClick={onResumeUpload}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-primary hover:text-accent transition-all border border-neutral-900 bg-white rounded-xl shadow-subtle cursor-pointer active:scale-[0.98]"
+            >
+              New Victim →
+            </button>
+          </div>
         </div>
 
         {/* TOP TAB BAR NAVIGATION */}
@@ -687,6 +699,14 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                 >
                   <Sparkles className="w-4 h-4" />
                   Repair Resume Workshop
+                </button>
+
+                <button
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="w-full h-12 bg-neutral-900 hover:bg-neutral-800 text-white text-[15px] font-bold rounded-xl transition-all shadow-subtle flex items-center justify-center gap-2 cursor-pointer border border-neutral-900 active:scale-[0.98]"
+                >
+                  <Download className="w-4 h-4" />
+                  Roast Certificate
                 </button>
 
                 <button
@@ -1397,12 +1417,21 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
           <h1 className="font-heading font-extrabold text-2xl tracking-tight text-primary">Resume Roast</h1>
           <p className="text-sm font-medium text-accent">Recruiter-grade criticism.</p>
         </div>
-        <button
-          onClick={onResumeUpload}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-primary hover:text-accent transition-all border border-neutral-900 hover:border-neutral-900 bg-white rounded-medium shadow-subtle cursor-pointer"
-        >
-          New Victim →
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-neutral-900 hover:bg-neutral-800 transition-all rounded-medium shadow-subtle cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            Roast Certificate
+          </button>
+          <button
+            onClick={onResumeUpload}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-primary hover:text-accent transition-all border border-neutral-900 hover:border-neutral-900 bg-white rounded-medium shadow-subtle cursor-pointer"
+          >
+            New Victim →
+          </button>
+        </div>
       </div>
 
       {/* TAB BAR NAVIGATION */}
@@ -1526,6 +1555,15 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
                     <Sparkles className="w-4 h-4" />
                     Repair Resume
                   </button>
+
+                  <button
+                    onClick={() => setIsShareModalOpen(true)}
+                    className="w-full py-3 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold rounded-medium transition-all shadow-subtle flex items-center justify-center gap-2 cursor-pointer border border-neutral-900"
+                  >
+                    <Download className="w-4 h-4" />
+                    Roast Certificate
+                  </button>
+
                   <button
                     onClick={handleShowReceiptsClick}
                     className="w-full py-3 bg-white text-neutral-900 hover:bg-neutral-900 hover:text-white text-xs font-black uppercase tracking-wider rounded-medium transition-all border-2 border-neutral-900 shadow-subtle flex items-center justify-center gap-1 cursor-pointer"
@@ -2506,6 +2544,15 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ data, onResumeUpload }
           </motion.div>
         )}
       </AnimatePresence>
+
+      <RoastCardModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        score={data.score}
+        quote={data.whatRecruitersThink.quote}
+        mood={getScoreVerdict(data.score).mood}
+        fixes={data.topFixes}
+      />
     </div>
   );
 };
