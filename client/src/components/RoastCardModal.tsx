@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { X, Download } from 'lucide-react';
 
 interface RoastCardModalProps {
@@ -21,14 +21,18 @@ export const RoastCardModal: React.FC<RoastCardModalProps> = ({
   userName,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setImgSrc(null);
+      return;
+    }
 
     // A tiny timeout ensures the canvas element is fully mounted and fonts are ready to render.
     const timer = setTimeout(() => {
       drawCard();
-    }, 80);
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [isOpen, score, quote, mood, fixes, userName]);
@@ -251,6 +255,10 @@ export const RoastCardModal: React.FC<RoastCardModalProps> = ({
     ctx.font = '900 17px "Geist", "Inter", sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.fillText('resumeroaster-in.vercel.app', 1140, 575);
+
+    // Export generated canvas to image source state for cross-platform compatibility and mobile long-press saves
+    const url = canvas.toDataURL('image/png');
+    setImgSrc(url);
   };
 
   const handleDownload = () => {
@@ -267,7 +275,7 @@ export const RoastCardModal: React.FC<RoastCardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="relative w-full max-w-4xl bg-[#111111] border-2 border-neutral-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-4xl bg-[#111111] border-2 border-neutral-800 rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh] sm:max-h-[95vh] flex flex-col">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-[#151515]">
           <div>
@@ -283,11 +291,30 @@ export const RoastCardModal: React.FC<RoastCardModalProps> = ({
         </div>
 
         {/* Canvas / Preview Area */}
-        <div className="p-6 flex flex-col items-center justify-center bg-[#09090a] overflow-x-auto min-h-[300px]">
+        <div className="p-4 sm:p-6 flex flex-col items-center justify-center bg-[#09090a] min-h-[220px] sm:min-h-[300px]">
+          {/* Keep canvas element hidden but present in DOM so we can write to it */}
           <canvas
             ref={canvasRef}
-            className="w-full max-w-[800px] aspect-[1200/630] border border-neutral-800 rounded-lg shadow-lg bg-[#0f0f10] block"
+            style={{ display: 'none' }}
           />
+
+          {imgSrc ? (
+            <>
+              <img
+                src={imgSrc}
+                alt="Roast Certificate"
+                className="w-full h-auto max-w-[800px] border border-neutral-800 rounded-lg shadow-lg bg-[#0f0f10] block select-none"
+              />
+              <p className="mt-3 text-[11px] text-[#C66A3D] font-bold text-center block sm:hidden">
+                💡 Long-press the image to save/share directly on mobile!
+              </p>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <div className="w-8 h-8 border-3 border-[#C66A3D] border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider">Generating Certificate...</p>
+            </div>
+          )}
         </div>
 
         {/* Modal Footer Controls */}
